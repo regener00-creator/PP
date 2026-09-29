@@ -1,0 +1,7 @@
+.git
+.env*
+tests
+supabase
+*.md
+*.tsbuildinfo
+vitest.config.mts
