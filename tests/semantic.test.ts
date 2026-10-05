@@ -14,6 +14,14 @@ describe("semantic privacy, cost and failure boundaries", () => {
     state.rpc.mockImplementation(async (name: string) => ({ error: null, data: name === "pp_ai_candidates" ? [candidate] : name === "pp_ai_answer" ? { decision: "answer", answer: "APPROVED_ANSWER" } : true }));
   });
   afterEach(() => vi.unstubAllEnvs());
+
+  it("includes approved alternatives in retrieval but sends the database-selected reply unchanged", async () => {
+    const alternatives=["ตอบอีกแบบ","อีกคำตอบ\nสองบรรทัด"];
+    state.rpc.mockImplementation(async(name:string)=>({error:null,data:name==="pp_ai_candidates"?[{...candidate,content:"หลัก",answer_variants:alternatives}]:name==="pp_ai_answer"?{decision:"answer",answer:alternatives[1]}:true}));
+    expect(await run()).toEqual({decision:"answer",answer:alternatives[1]});
+    expect(JSON.parse(state.generate.mock.calls[0][0].prompt).candidates[0].answer_variants).toEqual(alternatives);
+    expect(state.generate).toHaveBeenCalledTimes(1);
+  });
   it("retains the database mention flag without sending it to the model", async () => {
     state.rpc.mockImplementation(async (name: string) => ({ error: null, data: name === "pp_ai_candidates" ? [candidate] : name === "pp_ai_answer" ? { decision: "answer", answer: "มาตอบ", mention_owner: true } : true }));
     expect(await run()).toEqual({ decision: "answer", answer: "มาตอบ", mention_owner: true });

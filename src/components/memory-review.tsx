@@ -15,7 +15,7 @@ export function MemoryReview({ issues, files, folders }: { issues: MemoryIssue[]
     {!issues.length && <p className="muted">ไม่มีรายการที่ต้องตรวจ</p>}
     {issues.map(issue => <article className="memory-issue" key={issue.id}>
       <strong>{issue.kind === "conflict" ? "ข้อมูลขัดกัน" : "ความจำซ้ำ"}</strong><p>{issue.reason}</p>
-      <div className="memory-issue-pair">{[issue.left, issue.right].map(memory => <div key={memory.id}><h4>{memory.title}</h4><p className="memory-review-content">{memory.content}</p><button type="button" className="secondary" onClick={() => setSelected({ memory })}>แก้ไขก้อนนี้</button></div>)}</div>
+      <div className="memory-issue-pair">{[issue.left, issue.right].map(memory => <div key={memory.id}><h4>{memory.title}</h4><p className="memory-review-content">{memory.content}</p>{memory.answer_variants?.map((text,index)=><p className="memory-review-content" key={index}>{text}</p>)}<button type="button" className="secondary" onClick={() => setSelected({ memory })}>แก้ไขก้อนนี้</button></div>)}</div>
       <div className="row"><button type="button" onClick={() => setSelected({ memory: issue.left, merge: issue.right })}>รวมเป็นก้อนเดียว</button><button type="button" className="secondary" disabled={pending} onClick={() => {
         if (confirm("ยืนยันว่าตรวจแล้วว่าเป็นคนละเรื่องและเก็บแยกได้? ถ้าข้อมูลยังขัดกัน บอทจะยังขอให้ตรวจเมื่อถูกถาม")) start(async () => { try { await dismissMemoryIssue(issue.id); } catch { setMessage("บันทึกไม่สำเร็จ ลองอีกครั้ง"); } });
       }}>ตรวจแล้ว เก็บแยก</button></div>

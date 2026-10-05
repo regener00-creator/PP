@@ -5,7 +5,7 @@ import { AttachmentPicker, type LibraryFile, type LibraryFolder } from "./attach
 import type { MemoryColor } from "@/lib/memory-layout";
 import { MAX_UNKNOWN_REPLIES } from "@/lib/policy";
 const initial: ActionState = { ok: false, message: "" };
-export type Memory = { id: string; title: string; content: string; visibility: string; question_examples: string[]; expires_at: string | null; mention_owner: boolean; attachment_ids?: string[]; card_color?: MemoryColor | null };
+export type Memory = { id: string; title: string; content: string; answer_variants?: string[]; visibility: string; question_examples: string[]; expires_at: string | null; mention_owner: boolean; attachment_ids?: string[]; card_color?: MemoryColor | null };
 export { MemoryForm } from "./memory-form";
 export function DeleteMemory({ id }: { id: string }) {
   return <form action={deleteMemory} onSubmit={event => { if (!confirm("ลบความจำนี้ออกจาก PP?")) event.preventDefault(); }}><input name="id" value={id} type="hidden"/><button className="danger secondary">ลบความจำ</button></form>;

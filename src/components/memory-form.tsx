@@ -11,6 +11,8 @@ export function MemoryForm({ memory, mergeWith, files = [], folders = [] }: { me
   const [remove, setRemove] = useState(mergeWith?.id || "");
   const [title, setTitle] = useState(memory?.title || "");
   const [content, setContent] = useState([memory?.content, mergeWith?.content].filter(Boolean).join("\n\n"));
+  const [variants, setVariants] = useState(() => [...(memory?.answer_variants || []), ...(mergeWith?.answer_variants || [])].map((text, key) => ({ key, text })));
+  const nextVariant = useRef(variants.length);
   const [aliases, setAliases] = useState([...new Set([...(memory?.question_examples || []), ...(mergeWith?.question_examples || [])])].join("\n"));
   const [attachments, setAttachments] = useState([...new Set([...(memory?.attachment_ids || []), ...(mergeWith?.attachment_ids || [])])]);
   const [fileVersion, setFileVersion] = useState(0);
@@ -28,6 +30,8 @@ export function MemoryForm({ memory, mergeWith, files = [], folders = [] }: { me
     setTarget(other.id);
     if (merge) {
       setContent(current => [other.content, current].filter((v, i, all) => v && all.indexOf(v) === i).join("\n\n"));
+      const additional = (other.answer_variants || []).filter(text => !variants.some(row => row.text === text)).map(text => ({ key: nextVariant.current++, text }));
+      setVariants(current => [...current, ...additional]);
       setAliases(current => [...new Set([...other.question_examples, ...current.split(/\r?\n/).filter(Boolean)])].join("\n"));
       const currentFiles = formRef.current ? new FormData(formRef.current).getAll("attachment_ids").map(String) : attachments;
       setAttachments([...new Set([...other.attachment_ids, ...currentFiles])]); setFileVersion(v => v + 1);
@@ -40,7 +44,15 @@ export function MemoryForm({ memory, mergeWith, files = [], folders = [] }: { me
     <input type="hidden" name="id" value={target}/><input type="hidden" name="remove_id" value={remove}/><input type="hidden" name="receipt" value={state.receipt || ""}/>
     {notice && <p className="notice" role="status">{notice}</p>}
     <label>ชื่อความจำ<input name="title" value={title} onChange={e => setTitle(e.target.value)} required maxLength={120} placeholder="เช่น น้ำท่วม" disabled={pending}/></label>
-    <label>ข้อมูลที่อยากให้จำ<textarea name="content" value={content} onChange={e => setContent(e.target.value)} required rows={5} maxLength={2000} placeholder="เช่น น้ำลดแล้ว รถเข้าได้ตามปกติ" disabled={pending}/></label>
+    <input type="hidden" name="answer_variants_present" value="1"/>
+    <label>คำตอบที่ 1<textarea name="content" value={content} onChange={e => setContent(e.target.value)} required rows={5} maxLength={2000} placeholder="เช่น น้ำลดแล้ว รถเข้าได้ตามปกติ" disabled={pending}/></label>
+    <div className="reply-options" aria-label="คำตอบเพิ่มเติม">{variants.map((item, index) => <div className="reply-option" key={item.key}>
+      <label>คำตอบที่ {index + 2}<textarea name="answer_variants" value={item.text} onChange={event => setVariants(current => current.map(row => row.key === item.key ? { ...row, text: event.target.value } : row))} required maxLength={2000} rows={3} disabled={pending} placeholder="พิมพ์คำตอบอีกแบบสำหรับเรื่องเดียวกัน"/></label>
+      <button type="button" className="secondary danger" disabled={pending} aria-label={`ลบคำตอบที่ ${index + 2}`} onClick={() => { setVariants(current => current.filter(row => row.key !== item.key)); setDirty(true); }}>ลบคำตอบ</button>
+    </div>)}</div>
+    <div className="row between"><small>บอทสุ่มตอบครั้งละ 1 ชุด · {variants.length + 1}/20 ชุด</small><button type="button" className="secondary" disabled={pending || variants.length >= 19} onClick={() => { const item = { key: nextVariant.current++, text: "" }; setVariants(current => [...current, item]); setDirty(true); }}>เพิ่มคำตอบ</button></div>
+    <small>แต่ละชุดควรตอบคำถามเดียวกันได้ การสุ่มอาจได้คำตอบเดิมซ้ำ</small>
+    {variants.length > 19 && <p role="alert">รวมแล้วเกิน 20 ชุด กรุณาลบคำตอบบางชุดก่อนบันทึก</p>}
     <details open={aliases ? true : undefined}><summary>คำถามตัวอย่าง (ไม่จำเป็นต้องกรอก)</summary><label className="sr-only" htmlFor={`aliases-${target || "new"}`}>คำถามตัวอย่าง</label><textarea id={`aliases-${target || "new"}`} name="aliases" rows={3} value={aliases} onChange={e => setAliases(e.target.value)} placeholder="กรอกเพิ่มได้ ถ้ามีคำถามที่อยากให้ตอบตรงเป็นพิเศษ" disabled={pending}/></details>
     <label className="check"><input type="checkbox" name="mention_owner" checked={mention} onChange={e => setMention(e.target.checked)} disabled={pending}/>แท็กเจ้าของพร้อมคำตอบ</label>
     <label>ใช้ได้ถึงวันที่<input name="expires_at" type="date" value={expires} onChange={e => setExpires(e.target.value)} disabled={pending}/></label>
@@ -50,7 +62,7 @@ export function MemoryForm({ memory, mergeWith, files = [], folders = [] }: { me
     {!dirty && state.receipt && <section className="memory-review" aria-label="ผลตรวจความจำก่อนบันทึก">
       {state.concerns?.map((concern, index) => <article key={`${concern.memory.id}-${index}`}>
         <div className="row between"><strong>{concern.memory.title}</strong><span className={`review-kind ${concern.kind}`}>{concern.kind === "conflict" ? "ข้อมูลขัดกัน" : concern.kind === "duplicate" ? "ความจำซ้ำ" : "เรื่องที่เกี่ยวข้อง"}</span></div>
-        <p>{concern.reason}</p><p className="memory-review-content">{concern.memory.content}</p>
+        <p>{concern.reason}</p><p className="memory-review-content">{concern.memory.content}</p>{concern.memory.answer_variants?.map((text, index) => <p className="memory-review-content" key={index}>{text}</p>)}
         <div className="row"><button type="button" className="secondary" disabled={pending} onClick={() => choose(concern.memory, false)}>แก้ก้อนเดิม</button><button type="button" className="secondary" disabled={pending} onClick={() => choose(concern.memory, true)}>รวมข้อมูล</button></div>
       </article>)}
       <button className="secondary" name="decision" value="confirm" disabled={pending}>{state.unchecked ? "บันทึกโดยยังไม่ได้ตรวจด้วย AI" : target ? "ยืนยันบันทึกและเก็บก้อนอื่นแยกไว้" : "เก็บแยกเป็นก้อนใหม่"}</button>

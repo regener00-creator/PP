@@ -49,6 +49,7 @@ describe("real PostgreSQL migration and privacy boundary", () => {
     await db.exec(readFileSync(new URL("../supabase/migrations/20261001073157_pp_direct_semantic_chat.sql", import.meta.url), "utf8"));
     await db.exec(readFileSync(new URL("../supabase/migrations/20261001081525_pp_memory_assistant.sql", import.meta.url), "utf8"));
     await db.exec(readFileSync(new URL("../supabase/migrations/20261001084039_pp_memory_issue_layout.sql", import.meta.url), "utf8"));
+    await db.exec(readFileSync(new URL("../supabase/migrations/20261005112537_pp_memory_answer_variants.sql", import.meta.url), "utf8"));
   }, 30000);
   beforeEach(async () => {
     await db.exec("reset role; truncate pp.memories, pp.conversations, pp.rate_limits, pp.friends, pp.permissions, pp.ai_usage, pp.files, pp.folders, pp.learning_runs cascade");
@@ -58,6 +59,56 @@ describe("real PostgreSQL migration and privacy boundary", () => {
     await db.exec("set role service_role");
   });
   afterAll(async () => { await db.close(); });
+  it("randomizes complete saved replies for exact and semantic matches in groups and DMs", async () => {
+    await memory("shareable", "คำตอบหนึ่ง", ["อาหารโปรด"]);
+    await db.exec("update pp.memories set answer_variants=array['คำตอบสอง','คำตอบสาม'],mention_owner=true; select setseed(0.42)");
+    const c=(await candidates())[0], lease=randomUUID(); await directClaim(lease);
+    const dc=(await directCandidates(lease) as OwnerCandidate[])[0];
+    const seen=[new Set<string>(),new Set<string>(),new Set<string>(),new Set<string>()];
+    for(let i=0;i<30;i++) {
+      const outputs=[await answer("อาหารโปรด"),await semanticAnswer(c),await directRead(lease),await directAnswer(dc,lease)];
+      outputs.forEach((r,j)=>{ expect(r.decision).toBe("answer"); expect(["คำตอบหนึ่ง","คำตอบสอง","คำตอบสาม"]).toContain(r.answer); seen[j].add(r.answer!); });
+      expect(outputs[0]).toMatchObject({mention_owner:true}); expect(outputs[1]).toMatchObject({mention_owner:true});
+    }
+    seen.forEach(values=>expect(values.size).toBe(3));
+    expect((await db.query("select * from pp.ai_usage")).rows).toHaveLength(0);
+  });
+  it("saves, searches, reloads and explicitly removes variants, preserving them for old clients", async () => {
+    const value={title:"ทดสอบหลายคำตอบ",content:"หลัก",answer_variants:["คำตอบค้นเจอ","อีกแบบ\nหลายบรรทัด"],aliases:["ถาม"],question_examples:["ถาม"],mention_owner:false,attachment_ids:[],expires_at:null};
+    const save=async(v:unknown)=> (await db.query<{r:{decision:string;id:string}}>("select pp.pp_save_assisted_memory($1,pp.pp_memory_catalog()->>'revision') r",[JSON.stringify(v)])).rows[0].r;
+    const first=await save(value); expect(first.decision).toBe("saved");
+    expect((await db.query<{answer_variants:string[]}>("select * from pp.pp_search_memories('ค้นเจอ')")).rows[0].answer_variants).toEqual(value.answer_variants);
+    const catalog=(await db.query<{r:{memories:{answer_variants:string[]}[]}}>("select pp.pp_memory_catalog() r")).rows[0].r;
+    expect(catalog.memories[0].answer_variants).toEqual(value.answer_variants);
+    const {answer_variants,...legacy}=value; await save({...legacy,id:first.id});
+    expect((await db.query<{answer_variants:string[]}>("select answer_variants from pp.memories")).rows[0].answer_variants).toEqual(answer_variants);
+    await save({...value,id:first.id,answer_variants:[]}); expect(await answer("ถาม")).toMatchObject({answer:"หลัก"});
+  });
+  it("rejects malformed, empty, oversized and excessive reply variants", async () => {
+    await memory("shareable","หลัก");
+    for(const variants of [[""],["   "],[null],["x".repeat(2001)],Array(20).fill("x")]) {
+      await expect(db.query("update pp.memories set answer_variants=$1::text[]",[variants])).rejects.toThrow(/check constraint/);
+    }
+    await db.query("update pp.memories set answer_variants=$1::text[]",[Array(19).fill("x".repeat(2000))]);
+  });
+  it("rechecks access, expiry and revisions before randomly selecting any answer", async () => {
+    await seedSemantic(); await db.exec("update pp.memories set answer_variants=array['ALT_CANARY']");
+    const old=(await candidates())[0];const lease=randomUUID(); await directClaim(lease);const dc=(await directCandidates(lease) as OwnerCandidate[])[0];
+    await db.exec("update pp.memories set answer_variants=array['CHANGED_CANARY']");
+    expect((await semanticAnswer(old)).decision).toBe("unknown");expect((await directAnswer(dc,lease)).decision).toBe("unknown");
+    await db.exec("update pp.memories set expires_at=now()-interval '1 second'");
+    expect((await answer("อาหารโปรด")).decision).toBe("unknown");expect((await directRead(lease)).decision).toBe("unknown");
+    await db.exec("update pp.memories set expires_at=null,visibility='private'");
+    expect((await answer("อาหารโปรด")).decision).toBe("refuse");expect((await directRead(lease)).decision).toBe("refuse");
+    expect(JSON.stringify(await candidates())).not.toContain("CANARY");expect(JSON.stringify(await directCandidates(lease))).not.toContain("CANARY");
+  });
+  it("treats identical first replies with different alternate replies as conflicting", async () => {
+    await memory("shareable","เหมือนกัน");await memory("shareable","เหมือนกัน");
+    await db.exec("update pp.memories set answer_variants=array['ต่างกัน'] where id=(select id from pp.memories order by id limit 1)");
+    expect((await answer("อาหาร")).decision).toBe("conflict");
+    const lease=randomUUID();await directClaim(lease);expect((await directRead(lease,"อาหาร")).decision).toBe("conflict");
+  });
+
   it("defaults new records to shareable without republishing legacy private rows or opening storage", async () => {
     await memory("private", "LEGACY_PRIVATE");
     await db.exec("insert into pp.files(name,object_path,mime,bytes,visibility) values ('old.txt','legacy/file','text/plain',1,'private')");
@@ -480,7 +531,7 @@ describe("real PostgreSQL migration and privacy boundary", () => {
     expect((await semanticAnswer(previous)).decision).toBe("unknown");
     const selected = (await candidates())[0];
     expect(await semanticAnswer(selected)).toEqual({ decision: "answer", answer: "APPROVED_ANSWER", mention_owner: true });
-    expect(Object.keys(selected).sort()).toEqual(["content", "id", "questions", "revision", "title"]);
+    expect(Object.keys(selected).sort()).toEqual(["answer_variants", "content", "id", "questions", "revision", "title"]);
     await db.exec("update pp.memories set visibility='private'");
     expect((await semanticAnswer(selected)).decision).not.toBe("answer");
   });
@@ -488,7 +539,7 @@ describe("real PostgreSQL migration and privacy boundary", () => {
     await seedSemantic(); await memory("private", "PRIVATE_CANARY", ["privatealias"]);
     await db.exec("update pp.memories set title='PRIVATE_TITLE', question_examples=array['PRIVATE_EXAMPLE'] where visibility='private'");
     const result = await candidates(); expect(result).toHaveLength(1);
-    expect(Object.keys(result[0]).sort()).toEqual(["content","id","questions","revision","title"]);
+    expect(Object.keys(result[0]).sort()).toEqual(["answer_variants","content","id","questions","revision","title"]);
     expect(JSON.stringify(result)).not.toMatch(/PRIVATE/);
     expect(await semanticAnswer(result[0])).toEqual({ decision: "answer", answer: "APPROVED_ANSWER" });
   });

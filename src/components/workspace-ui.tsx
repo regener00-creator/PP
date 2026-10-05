@@ -94,7 +94,7 @@ export function MemoryBoard({items,files,folders,query}:{items:Memory[];files:Li
     <TilePages key={query} items={shown} label="รายการความจำ" renderItem={m=>{
       const index=shown.findIndex(item=>item.id===m.id);
       const tileClass=`memory-tile memory-card${editing?" arranging":""}`;
-      const caption=<span className="memory-caption">{m.attachment_ids?.length?"มีไฟล์แนบ":""}</span>;
+      const caption=<span className="memory-caption">{[m.answer_variants?.length ? `${m.answer_variants.length + 1} คำตอบ` : "", m.attachment_ids?.length ? "มีไฟล์แนบ" : ""].filter(Boolean).join(" · ")}</span>;
       if(!editing)return <button type="button" className={tileClass} data-color={m.card_color??undefined} key={m.id}
         disabled={busy} draggable={!busy} aria-describedby={dragHelpId}
         data-dragging={dragged===m.id||undefined} data-drop-target={dropTarget===m.id||undefined}

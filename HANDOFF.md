@@ -405,3 +405,11 @@ Removed the idea generation history section and pagination from /planner at the 
 - Replaced removed feature tests with retirement regressions for stale actions, webhook and maintenance; historical DB boundary tests remain.
 
 Validation: typecheck, production build and 400 tests (30 files) passed. Production deployment dpl_9HQUohLkUBiv6p2HqSTtt3drwd3F is READY at https://pp-theta-beryl.vercel.app. Post-deploy database check: 0 learning-enabled groups; 21 manual memories retained. Browser reached the protected login page; authenticated visual verification was not possible in the current browser session. No live LINE message was sent.
+
+## Multiple owner-written memory replies — 2026-10-05
+- 1 primary content + 0–19 answer_variants; each 1–2000 characters, multiline retained. UI add/delete, count on card, search all alternatives, edit/merge preserve them. Variants are randomly selected, may repeat, and must be suitable for the same request. No new AI generation call.
+- SQL migration 20261005112537_pp_memory_answer_variants.sql applied to NOOSOL WEBSITE / pp; reply selection occurs only after existing group/DM authorization, expiry, conflict and revision checks. Legacy clients preserve alternatives when key omitted. Reviews and retrieval include alternatives; existing prompt byte budgets still apply. All 21 existing memories retained; no production sample memory added, no LINE messages or live AI test calls.
+- Validation: typecheck, build and 410 tests / 30 files passed. Local browser exercised add/remove with multiline-capable controls, no browser errors. Temporary preview route removed before deployment. Screenshot ../PP-memory-replies.png contains synthetic unsaved example only.
+- Supabase advisors: expected server-only RLS/no-policy INFO notices; existing shared Auth leaked-password protection warning unchanged: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection . New helper execute rights verified service_role only (anon/authenticated denied).
+
+Production deployment dpl_6hgBxqbYkVaeiCR77Z3vcAzArz5t is READY and aliased to https://pp-theta-beryl.vercel.app. No error/fatal runtime logs at completion. Authenticated production UI and an actual LINE reply were not exercised; browser checks used the real components locally and synthetic data.

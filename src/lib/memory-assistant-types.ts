@@ -1,5 +1,5 @@
 export type AssistedMemory = {
-  id: string; title: string; content: string; question_examples: string[]; revision: string;
+  id: string; title: string; content: string; answer_variants?: string[]; question_examples: string[]; revision: string;
   attachment_ids: string[]; mention_owner: boolean; expires_at: string | null;
 };
 export type MemoryConcern = { memory: AssistedMemory; kind: "duplicate" | "related" | "conflict"; reason: string };

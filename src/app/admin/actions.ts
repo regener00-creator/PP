@@ -14,7 +14,7 @@ export async function saveMemory(_: ActionState, form: FormData): Promise<Action
   await requireAdmin();
   // Reject a stale form's explicit private request instead of silently publishing it.
   if (form.has("visibility") && input(form, "visibility") !== "shareable") return { ok: false, message: "หน้าตั้งค่ามีการเปลี่ยนแปลง กรุณารีเฟรชหน้าแล้วลองอีกครั้ง" };
-  const parsed = memoryInput.safeParse({ title: input(form, "title"), content: input(form, "content"), mention_owner: form.get("mention_owner") === "on", aliases: input(form, "aliases").split(/\r?\n/).filter(Boolean), expires_at: input(form, "expires_at") ? `${input(form, "expires_at")}T23:59:59+07:00` : null });
+  const parsed = memoryInput.safeParse({ title: input(form, "title"), content: input(form, "content"), answer_variants: form.has("answer_variants_present") || form.has("answer_variants") ? form.getAll("answer_variants") : undefined, mention_owner: form.get("mention_owner") === "on", aliases: input(form, "aliases").split(/\r?\n/).filter(Boolean), expires_at: input(form, "expires_at") ? `${input(form, "expires_at")}T23:59:59+07:00` : null });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง" };
   const id = input(form, "id");
   if (id && !z.uuid().safeParse(id).success) return { ok: false, message: "รหัส memory ไม่ถูกต้อง" };

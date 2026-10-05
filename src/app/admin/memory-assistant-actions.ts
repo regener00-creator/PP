@@ -13,7 +13,7 @@ export async function saveAssistedMemory(_: MemoryReviewState, form: FormData): 
   await requireAdmin();
   const str = (key: string) => String(form.get(key) || "");
   if (form.has("visibility") && str("visibility") !== "shareable") return { ok: false, message: "กรุณารีเฟรชหน้าก่อนบันทึก" };
-  const parsed = memoryInput.safeParse({ title: str("title"), content: str("content"), aliases: str("aliases").split(/\r?\n/).map(s => s.trim()).filter(Boolean), mention_owner: form.get("mention_owner") === "on", expires_at: str("expires_at") ? `${str("expires_at")}T23:59:59+07:00` : null });
+  const parsed = memoryInput.safeParse({ title: str("title"), content: str("content"), answer_variants: form.has("answer_variants_present") || form.has("answer_variants") ? form.getAll("answer_variants") : undefined, aliases: str("aliases").split(/\r?\n/).map(s => s.trim()).filter(Boolean), mention_owner: form.get("mention_owner") === "on", expires_at: str("expires_at") ? `${str("expires_at")}T23:59:59+07:00` : null });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
   const id = str("id"), remove = str("remove_id");
   if ((id && !z.uuid().safeParse(id).success) || (remove && (!z.uuid().safeParse(remove).success || remove === id))) return { ok: false, message: "รหัสความจำไม่ถูกต้อง" };

@@ -24,6 +24,18 @@ describe("assisted memory saving", () => {
     expect(state.generate.mock.calls[0][0].prompt).toContain("น้ำลดแล้ว");
     expect(state.rpc).toHaveBeenCalledWith("pp_save_assisted_memory", expect.objectContaining({ p_value: expect.objectContaining({ aliases: [], question_examples: [] }), p_catalog: catalog.revision }));
   });
+
+  it("reviews and saves every alternate reply without flattening multiline text", async () => {
+    const f=form();f.set("answer_variants_present","1");f.append("answer_variants","แห้งแล้วจ้า\nรถเข้าได้");f.append("answer_variants","น้ำลดแล้วครับ");
+    expect((await saveAssistedMemory(empty,f)).ok).toBe(true);
+    const payload=JSON.parse(state.generate.mock.calls[0][0].prompt);
+    expect(payload.memories.find((m:{id:string})=>m.id==="draft").answer_variants).toEqual(["แห้งแล้วจ้า\nรถเข้าได้","น้ำลดแล้วครับ"]);
+    expect(state.rpc).toHaveBeenCalledWith("pp_save_assisted_memory",expect.objectContaining({p_value:expect.objectContaining({answer_variants:["แห้งแล้วจ้า\nรถเข้าได้","น้ำลดแล้วครับ"]})}));
+  });
+  it.each([{variants:[" "]},{variants:Array(20).fill("ตอบ")},{variants:["ก".repeat(2001)]}])("rejects invalid variations before AI or writes", async ({variants}) => {
+    const f=form();f.set("answer_variants_present","1");for(const value of variants)f.append("answer_variants",value);
+    expect((await saveAssistedMemory(empty,f)).ok).toBe(false);expect(state.rpc).not.toHaveBeenCalled();expect(state.generate).not.toHaveBeenCalled();
+  });
   it("stops before a write for duplicates, then saves only the confirmed reviewed draft", async () => {
     state.generate.mockResolvedValue({ output: { pairs: [{ left: "draft", right: memory.id, kind: "duplicate", reason: "ข้อมูลเหมือนกัน" }] } });
     const f = form(), review = await saveAssistedMemory(empty, f);
