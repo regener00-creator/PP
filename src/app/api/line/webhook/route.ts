@@ -2,6 +2,9 @@ import { z } from "zod";
 import { required } from "@/lib/env";
 import { verifySignature, userId } from "@/lib/line";
 import { processEvent } from "@/lib/bot";
+import { discoverGroupFriends } from "@/lib/friend-discovery";
+import { after } from "next/server";
+import { captureLearningEvent, runLearning } from "@/lib/learning";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const envelope = z.object({ destination: userId, events: z.array(z.unknown()).max(100) });
@@ -26,7 +29,12 @@ export async function POST(request: Request) {
   let body: z.infer<typeof envelope>;
   try { body = envelope.parse(JSON.parse(raw.toString("utf8"))); } catch { return new Response("Invalid body", { status: 400 }); }
   // Await work so LINE redelivery can retry failed events. No fire-and-forget work.
-  const results = await Promise.allSettled(body.events.map(event => processEvent(event, body.destination)));
+  // Replies retain their mention-only rules. Await both operations fully even
+  // if one fails, so reply bookkeeping finishes before LINE redelivery.
+  const results = await Promise.allSettled(body.events.flatMap(event => [
+    processEvent(event, body.destination), discoverGroupFriends(event, body.destination), captureLearningEvent(event, body.destination)
+  ]));
+  if(results.some(result=>result.status==="fulfilled" && result.value===true))after(async()=>{await runLearning();});
   const failed = results.filter(result => result.status === "rejected").length;
   if (failed) {
     console.error(JSON.stringify({ code: "PP_WEBHOOK_RETRY", count: failed }));

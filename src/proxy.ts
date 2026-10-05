@@ -16,8 +16,10 @@ export async function proxy(request: NextRequest) {
       }
     }
   });
-  await client.auth.getUser();
+  // Refresh/verify the signed token locally when possible. Each protected page,
+  // action and download still checks the current user through requireAdmin().
+  await client.auth.getClaims();
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
-export const config = { matcher: ["/admin/:path*", "/login"] };
+export const config = { matcher: ["/admin/:path*", "/planner/:path*", "/workspace", "/login"] };

@@ -2,10 +2,18 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { database, dbError } from "./db";
 import { required } from "./env";
-import { decide, isSensitive, normalizeQuestion, type MemoryMatch } from "./policy";
-import { extractQuestion, LineError, lineRequest, mentionOwner, ownerInGroup, textEvent, userId, type LineMessage } from "./line";
+import { semanticMatch } from "./semantic";
+import { decide, normalizeQuestion, ownerPresenceQuestion, type MemoryMatch } from "./policy";
+import { extractQuestion, LineError, lineRequest, mentionOwner, ownerInGroup, ownerTextEvent, textEvent, userId, type LineMessage } from "./line";
+import { processDirectMessage } from "./owner-chat";
+import { memoryFiles } from "./library";
 
 export async function processEvent(input: unknown, destination: string) {
+  const direct = ownerTextEvent.safeParse(input);
+  if (direct.success) {
+    if (direct.data.mode !== "standby") await processDirectMessage(direct.data, destination);
+    return;
+  }
   const parsed = textEvent.safeParse(input);
   if (!parsed.success || parsed.data.mode === "standby") return;
   const event = parsed.data;
@@ -38,27 +46,30 @@ export async function processEvent(input: unknown, destination: string) {
     const rate = await db.rpc("pp_take_rate", { p_key: `message:${group}:${sender}`, p_limit: 8, p_seconds: 60 });
     dbError(rate.error);
     if (!rate.data) { await finish("ignored", "rate_limit"); return; }
-    const owner = await db.from("owner").select("display_name,line_user_id").eq("id", 1).single();
+    const owner = await db.from("owner").select("display_name,line_user_id,unknown_replies").eq("id", 1).single();
     dbError(owner.error);
-    let match: MemoryMatch = { decision: "unknown" };
-    if (!isSensitive(question)) {
-      const result = await db.rpc("pp_answer", { p_question: normalizeQuestion(question), p_group: group, p_sender: sender });
-      dbError(result.error);
-      match = result.data as MemoryMatch;
+    const result = await db.rpc("pp_answer", { p_question: normalizeQuestion(question), p_group: group, p_sender: sender });
+    dbError(result.error);
+    let match = result.data as MemoryMatch;
+    if (match.decision === "unknown" && !ownerPresenceQuestion(question, owner.data?.display_name || "ปีโป้")) {
+      match = await semanticMatch(question, group, sender, owner.data?.display_name || "ปีโป้");
     }
-    const decision = decide(question, match, owner.data?.display_name || "ปีโป้");
+    const decision = decide(question, match, owner.data?.display_name || "ปีโป้", owner.data?.unknown_replies);
     let message: LineMessage = { type: "text", text: decision.text };
     const token = required("LINE_CHANNEL_ACCESS_TOKEN");
     const ownerId = owner.data?.line_user_id || process.env.OWNER_LINE_USER_ID;
-    if (decision.kind === "handoff" && permission.data.allow_owner_mention && userId.safeParse(ownerId).success && ownerId !== sender && ownerId !== destination) {
+    // Owners can test their own handoff; only the bot itself is excluded.
+    const wantsMention = decision.kind === "handoff" || (decision.kind === "answer" && decision.mention_owner === true);
+    if (wantsMention && permission.data.allow_owner_mention && userId.safeParse(ownerId).success && ownerId !== destination) {
       if (await ownerInGroup(group, ownerId!, token)) {
         const cooldown = await db.rpc("pp_take_rate", { p_key: `mention:${group}`, p_limit: 1, p_seconds: 300 });
         dbError(cooldown.error);
-        if (cooldown.data) message = mentionOwner(ownerId!);
+        if (cooldown.data) message = mentionOwner(ownerId!, decision.kind === "answer" ? decision.text : undefined);
       }
     }
     // A LINE reply token is single use. Retries never switch to push messages.
-    await lineRequest("message/reply", token, { replyToken: event.replyToken, messages: [message] });
+    const attachments = decision.kind === "answer" ? await memoryFiles(match.memory_id, sender, group) : [];
+    await lineRequest("message/reply", token, { replyToken: event.replyToken, messages: [message, ...attachments] });
     await finish("replied", decision.kind);
   } catch (error) {
     const permanent = error instanceof LineError && error.status === 400;

@@ -7,3 +7,12 @@ node_modules/
 coverage/
 supabase/.temp/
 supabase/.branches/
+
+# Local credentials and exports must stay on each computer.
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+*.log

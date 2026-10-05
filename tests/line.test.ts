@@ -20,5 +20,28 @@ describe("LINE boundaries", () => {
     expect(extractQuestion({ ...event, message: { ...event.message, text: "@ppfake hello", mention: undefined } }, bot, true)).toBeNull();
   });
   it("does not trigger for a different account with the same name", () => expect(extractQuestion({ ...event, message: { ...event.message, mention: { mentionees: [{ type: "user", userId: owner, isSelf: false, index: 0, length: 3 }] } } }, bot, true)).toBeNull());
+  it.each(["@น้องโจอา คำถาม", "@น้องโจอา\nคำถาม", "@pp คำถาม", "@PP คำถาม"])("accepts the current and legacy typed names: %s", text => {
+    expect(extractQuestion({message:{type:"text",id:"1",text}},bot,true)).toBe("คำถาม");
+  });
+  it.each(["น้องโจอา คำถาม", "@น้องโจอาปลอม คำถาม", "เพื่อนเรียก @น้องโจอา คำถาม", "@น้องโจอาคำถาม"])("does not activate unrelated text or a longer name: %s", text => {
+    expect(extractQuestion({message:{type:"text",id:"1",text}},bot,true)).toBeNull();
+  });
+  it("does not enable typed names when text triggers are disabled",()=>{
+    expect(extractQuestion({message:{type:"text",id:"1",text:"@น้องโจอา คำถาม"}},bot)).toBeNull();
+  });
+  it.each([true,false])("recognizes real mentions after a display-name change using identity (isSelf=%s)",isSelf=>{
+    const name="@น้องโจอา";
+    expect(extractQuestion({message:{type:"text",id:"1",text:`${name} คำถาม`,mention:{mentionees:[{type:"user",index:0,length:name.length,isSelf,userId:bot}]}}},bot)).toBe("คำถาม");
+  });
+  it("ignores real mentions to another account named น้องโจอา",()=>{
+    const name="@น้องโจอา";
+    expect(extractQuestion({message:{type:"text",id:"1",text:`${name} คำถาม`,mention:{mentionees:[{type:"user",index:0,length:name.length,isSelf:false,userId:owner}]}}},bot,true)).toBeNull();
+  });
   it("uses a real textV2 user mention", () => expect(mentionOwner(owner)).toMatchObject({ type: "textV2", substitution: { owner: { type: "mention", mentionee: { type: "user", userId: owner } } } }));
+  it("escapes user-authored substitutions before appending the real owner mention", () => {
+    expect(mentionOwner(owner, "มาตอบ {owner} {other}")).toMatchObject({
+      type: "textV2", text: "มาตอบ {{owner}} {{other}}\n{owner}",
+      substitution: { owner: { type: "mention", mentionee: { type: "user", userId: owner } } }
+    });
+  });
 });

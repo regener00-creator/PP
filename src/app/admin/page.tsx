@@ -1,27 +1,84 @@
-import Link from "next/link";
+import { Suspense } from "react";
+import { CalendarBoard, MemoryBoard, type Friend, type LibraryFile } from "@/components/workspace-ui";
+import { type Memory, type Permission } from "@/components/admin-forms";
+import { LineQuota, QuotaLoading } from "@/components/line-quota";
+import { SemanticStatus } from "@/components/semantic-status";
 import { requireAdmin } from "@/lib/auth";
 import { database, dbError } from "@/lib/db";
-import { MemoryForm, DeleteMemory, OwnerForm, PermissionForm, type Memory, type Permission } from "@/components/admin-forms";
-import { logout } from "@/app/login/actions";
-import { saveFriend } from "./actions";
+import { thaiDate, type CalendarEvent } from "@/lib/calendar";
+import { MemoryReview } from "@/components/memory-review";
+import { memoryCatalog } from "@/lib/memory-assistant";
+import type { LibraryFolder } from "@/components/attachment-picker";
+import type { MemoryIssue } from "@/lib/memory-assistant-types";
+
 export const dynamic = "force-dynamic";
-const labels: Record<string,string> = { answer: "ตอบจากความจำ", refuse: "ขอไม่ตอบ", unknown: "ยังไม่รู้", handoff: "ให้เจ้าตัวตอบ", rate_limit: "พักการตอบ", delivery_error: "ส่งไม่สำเร็จ" };
-export default async function Admin() {
+
+const reasons: Record<string, string> = {
+  sent: "LINE รับคำขอแล้ว", delivery_error: "ส่งไม่สำเร็จ", quota_exhausted: "โควตาไม่พอ",
+  quota_or_rate_limit: "โควตาหรืออัตราการส่งเต็ม", quota_unavailable: "ตรวจโควตาไม่ได้",
+  group_disabled: "กลุ่มปิดใช้งาน", changed: "รายการเปลี่ยนแล้ว", line_rejected: "LINE ปฏิเสธคำขอ",
+};
+
+export default async function Admin({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q.slice(0, 120) : "";
   await requireAdmin();
   const db = database();
-  const [owner, memories, permissions, friends, conversations] = await Promise.all([
+  const [memories, permissions, files, events, friends, deliveries, folders, owner] = await Promise.all([
+    db.rpc("pp_search_memories", { p_query: query }),
+    db.from("permissions").select("group_id,label,enabled,allow_owner_mention").order("created_at", { ascending: false }),
+    db.from("files").select("id,name,folder_id,mime,bytes,visibility").order("created_at", { ascending: false }).limit(500),
+    db.from("calendar_events").select("*").order("event_date").limit(100),
+    db.from("friends").select("id,line_user_id,display_name,group_id,blocked"),
+    db.from("reminder_deliveries").select("id,event_id,occurs_on,lead_days,target,status,reason,created_at").order("created_at", { ascending: false }).limit(30),
+    db.from("folders").select("id,name").order("name"),
     db.from("owner").select("display_name,line_user_id").eq("id", 1).single(),
-    db.from("memories").select("id,title,content,visibility,question_examples,expires_at").order("updated_at", { ascending: false }).limit(200),
-    db.from("permissions").select("group_id,label,enabled,allow_owner_mention").order("created_at", { ascending: false }).limit(100),
-    db.from("friends").select("id,group_id,line_user_id,display_name,blocked").order("created_at", { ascending: false }).limit(100),
-    db.from("conversations").select("event_id,group_id,status,decision,created_at").order("created_at", { ascending: false }).limit(30)
   ]);
-  for (const result of [owner, memories, permissions, friends, conversations]) dbError(result.error);
+  for (const result of [memories, permissions, files, events, friends, deliveries, folders, owner]) dbError(result.error);
   const items = (memories.data || []) as Memory[];
   const groups = (permissions.data || []) as Permission[];
-  return <div className="admin-shell"><aside className="sidebar"><Link className="brand" href="/"><span className="mark">pp<span>•</span></span><span>PP <small>YOUR SPACE</small></span></Link><nav><a href="#memories">◈ ความจำ</a><a href="#owner">☺ เจ้าของ</a><a href="#groups">▦ กลุ่มและสิทธิ์</a><a href="#friends">♡ เพื่อน</a><a href="#activity">↗ การตอบล่าสุด</a></nav><div className="sidebar-bottom"><span className="status-dot"/> เจ้าของเป็นคนเลือกสิ่งที่ PP รู้<form action={logout}><button className="secondary">ออกจากระบบ</button></form></div></aside><main className="dashboard"><header className="dashboard-heading"><div><div className="eyebrow">A LITTLE MEMORY GOES A LONG WAY</div><h1>สวัสดี, {owner.data?.display_name}<span className="accent">.</span></h1><p>วันนี้อยากให้ PP ช่วยเล่าเรื่องอะไรให้เพื่อนฟัง?</p></div><a className="button" href="#new-memory">เพิ่มความจำ +</a></header><div className="stats"><article><span>ความจำทั้งหมดที่แสดง</span><strong>{items.length}</strong></article><article><span>แบ่งปันกับเพื่อนได้</span><strong>{items.filter(m => m.visibility === "shareable").length}</strong></article><article><span>เก็บไว้ส่วนตัว</span><strong>{items.filter(m => m.visibility === "private").length}</strong></article><article><span>กลุ่มที่เปิดใช้งาน</span><strong>{groups.filter(g => g.enabled).length}</strong></article></div><div className="notice">PP ตอบเมื่อคำถามตรงกับตัวอย่างที่คุณเพิ่มไว้ โดยข้ามช่องว่างและเครื่องหมายคำถาม หากมีหลายคำตอบที่ขัดกันจะขอไม่ตอบ</div>
-    <section id="memories"><div className="section-heading"><h2>ความจำของ PP</h2><span className="muted">แสดงล่าสุดสูงสุด 200 รายการ</span></div><div className="memory-grid"><article className="panel new-memory" id="new-memory"><div className="eyebrow">NEW MEMORY</div><h3>เรื่องที่อยากให้จำ</h3><MemoryForm/></article><div className="stack">{items.length === 0 ? <div className="empty"><div>✳</div><h3>เริ่มจากเรื่องเล็ก ๆ ก็ได้</h3><p>อาหารที่ชอบ เกมที่เล่น หรือคำถามที่เพื่อนถามบ่อย<br/>เลือก Shareable เมื่อพร้อมให้ทั้งกลุ่มรู้</p></div> : items.map(memory => <article className="panel" key={memory.id}><div className="row between"><h3>{memory.title}</h3><span className={`badge ${memory.visibility}`}>{memory.visibility === "private" ? "◈ Private" : "↗ Shareable"}</span></div><p className="memory-content">{memory.content}</p><details><summary>แก้ไขความจำ</summary><MemoryForm memory={memory}/><DeleteMemory id={memory.id}/></details></article>)}</div></div></section>
-    <div className="settings-grid"><section id="owner" className="panel"><div className="eyebrow">THE HUMAN BEHIND PP</div><h2>เจ้าของ PP</h2><OwnerForm owner={owner.data || { display_name: "ปีโป้", line_user_id: null }}/></section><section id="groups" className="panel"><div className="eyebrow">CLOSE FRIENDS ONLY</div><h2>กลุ่มและสิทธิ์</h2><p>แท็ก PP จริงในกลุ่มหนึ่งครั้ง กลุ่มจะปรากฏที่นี่และรอคุณอนุมัติ</p>{groups.map(group => <details key={group.group_id}><summary>{group.enabled ? "🟢" : "⚪"} {group.label || group.group_id}</summary><PermissionForm permission={group}/></details>)}<details><summary>เพิ่มกลุ่มด้วย ID</summary><PermissionForm/></details></section></div>
-    <section id="friends" className="panel"><h2>เพื่อนในกลุ่ม</h2><p>เพื่อนจะปรากฏเมื่อเรียก PP ในกลุ่มที่อนุมัติแล้ว · แสดงล่าสุดสูงสุด 100 คน</p>{friends.data?.length ? friends.data.map(friend => <form action={saveFriend} className="friend-row" key={friend.id}><input type="hidden" name="id" value={friend.id}/><div><code>{friend.line_user_id}</code><small>{groups.find(g => g.group_id === friend.group_id)?.label || friend.group_id}</small></div><label>ชื่อเพื่อน<input name="display_name" defaultValue={friend.display_name} maxLength={80}/></label><label className="check"><input name="blocked" type="checkbox" defaultChecked={friend.blocked}/>พักการตอบคนนี้</label><button className="secondary">บันทึก</button></form>) : <p className="muted">ยังไม่มีเพื่อนเรียก PP</p>}</section>
-    <section id="activity" className="panel"><h2>การตอบล่าสุด</h2><p>เก็บเฉพาะสถานะและ ID ที่จำเป็น 30 วัน ไม่มีข้อความสนทนาดิบหรือเนื้อหา private</p><div className="table-wrap"><table><thead><tr><th>เวลา</th><th>กลุ่ม</th><th>การตัดสินใจ</th><th>การส่ง</th></tr></thead><tbody>{conversations.data?.map(item => <tr key={item.event_id}><td>{new Intl.DateTimeFormat("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "short", timeStyle: "short" }).format(new Date(item.created_at))}</td><td>{groups.find(g => g.group_id === item.group_id)?.label || item.group_id}</td><td>{labels[item.decision || ""] || "กำลังประมวลผล"}</td><td>{item.status}</td></tr>)}</tbody></table></div>{!conversations.data?.length && <p className="muted">พร้อมเมื่อเพื่อนเรียก @pp</p>}</section></main></div>;
+  const calendarEvents = (events.data || []) as CalendarEvent[];
+  const libraryFiles = (files.data || []) as LibraryFile[];
+
+  return <>
+    <header className="dashboard-heading"><h1>ความทรงจำ</h1></header>
+    <div className="stats memory-stats">
+      <article><span>ความจำทั้งหมดที่แสดง</span><strong>{items.length}</strong></article>
+      <article><span>กลุ่มที่เปิดใช้งาน</span><strong>{groups.filter(g => g.enabled).length}</strong></article>
+    </div>
+    <CalendarBoard events={calendarEvents} today={thaiDate()} groups={groups} friends={(friends.data || []) as Friend[]} files={libraryFiles} folders={folders.data || []} owner={owner.data || { display_name: "เจ้าของ", line_user_id: null }}>
+      <MemoryBoard key={query} items={items} files={libraryFiles} folders={folders.data || []} query={query}/>
+      <Suspense fallback={<p role="status">กำลังอ่านรายการที่ต้องตรวจ…</p>}><MemoryReviewLoader files={libraryFiles} folders={folders.data || []}/></Suspense>
+    </CalendarBoard>
+    <section className="panel delivery-panel">
+      <h2>การแจ้งเตือนล่าสุด</h2>
+      <div className="table-wrap"><table>
+        <thead><tr><th>รายการ</th><th>วันที่</th><th>ผู้รับ</th><th>สถานะ</th></tr></thead>
+        <tbody>{deliveries.data?.map(d => <tr key={d.id}>
+          <td>{calendarEvents.find(e => e.id === d.event_id)?.title || "รายการที่ลบแล้ว"}</td>
+          <td>{d.occurs_on}{d.lead_days ? " (ก่อน 1 วัน)" : ""}</td>
+          <td>{d.target.startsWith("U") ? "แชตส่วนตัวเจ้าของ" : groups.find(g => g.group_id === d.target)?.label || "กลุ่ม"}</td>
+          <td>{reasons[d.reason] || d.status}</td>
+        </tr>)}</tbody>
+      </table></div>
+      {!deliveries.data?.length && <p>ยังไม่มีการส่งแจ้งเตือน</p>}
+    </section>
+    <details className="panel semantic-details">
+      <summary>การจับความหมายด้วย Gemini และโควตา AI</summary>
+      <Suspense fallback={<p role="status">กำลังอ่านข้อมูล AI…</p>}><SemanticStatus/></Suspense>
+    </details>
+    <Suspense fallback={<QuotaLoading/>}><LineQuota/></Suspense>
+  </>;
+}
+
+async function MemoryReviewLoader({ files, folders }: { files: LibraryFile[]; folders: LibraryFolder[] }) {
+  await requireAdmin();
+  const [catalog, result] = await Promise.all([memoryCatalog(), database().from("memory_issues").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(100)]);
+  dbError(result.error);
+  const issues: MemoryIssue[] = (result.data || []).flatMap(issue => {
+    const left = catalog.memories.find(m => m.id === issue.left_id && m.revision === issue.left_revision);
+    const right = catalog.memories.find(m => m.id === issue.right_id && m.revision === issue.right_revision);
+    return left && right ? [{ id: issue.id, kind: issue.kind, reason: issue.reason, left, right }] : [];
+  });
+  return <MemoryReview issues={issues} files={files} folders={folders}/>;
 }

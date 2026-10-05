@@ -1,12 +1,12 @@
 "use client";
-import { useActionState } from "react";
-import { saveMemory, deleteMemory, saveOwner, savePermission, type ActionState } from "@/app/admin/actions";
+import { useActionState, useRef, useState } from "react";
+import { saveMemory, deleteMemory, saveOwner, saveUnknownReply, savePermission, type ActionState } from "@/app/admin/actions";
+import { AttachmentPicker, type LibraryFile, type LibraryFolder } from "./attachment-picker";
+import type { MemoryColor } from "@/lib/memory-layout";
+import { MAX_UNKNOWN_REPLIES } from "@/lib/policy";
 const initial: ActionState = { ok: false, message: "" };
-export type Memory = { id: string; title: string; content: string; visibility: string; question_examples: string[]; expires_at: string | null };
-export function MemoryForm({ memory }: { memory?: Memory }) {
-  const [state, action, pending] = useActionState(saveMemory, initial);
-  return <form action={action} className="stack"><input type="hidden" name="id" value={memory?.id || ""}/><label>ชื่อความจำ<input name="title" defaultValue={memory?.title} required maxLength={120} placeholder="เช่น อาหารที่ชอบ"/></label><label>คำถามที่ให้ PP ตอบ <small>หนึ่งคำถามต่อบรรทัด ไม่ต้องใส่ @pp</small><textarea name="aliases" required rows={3} defaultValue={memory?.question_examples.join("\n")} placeholder={"ปีโป้ชอบกินอะไร\nปีโป้ชอบอาหารอะไร"}/></label><label>คำตอบของ PP<textarea name="content" required rows={3} maxLength={2000} defaultValue={memory?.content} placeholder="เขียนคำตอบที่พร้อมให้ PP ส่งในกลุ่ม"/></label><div className="form-columns"><label>ใครรู้เรื่องนี้ได้<select name="visibility" defaultValue={memory?.visibility || "private"}><option value="private">Private · เก็บไว้ส่วนตัว</option><option value="shareable">Shareable · ให้ทุกคนในกลุ่มรู้</option></select></label><label>ใช้ได้ถึงวันที่ <small>เว้นว่างถ้าไม่หมดอายุ</small><input name="expires_at" type="date" defaultValue={memory?.expires_at ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date(memory.expires_at)) : ""}/></label></div><button disabled={pending}>{pending ? "กำลังบันทึก…" : memory ? "บันทึกการแก้ไข" : "เพิ่มความจำ +"}</button><p role="status" className={state.ok ? "form-status success" : "form-status"}>{state.message}</p></form>;
-}
+export type Memory = { id: string; title: string; content: string; visibility: string; question_examples: string[]; expires_at: string | null; mention_owner: boolean; attachment_ids?: string[]; card_color?: MemoryColor | null };
+export { MemoryForm } from "./memory-form";
 export function DeleteMemory({ id }: { id: string }) {
   return <form action={deleteMemory} onSubmit={event => { if (!confirm("ลบความจำนี้ออกจาก PP?")) event.preventDefault(); }}><input name="id" value={id} type="hidden"/><button className="danger secondary">ลบความจำ</button></form>;
 }
@@ -15,6 +15,21 @@ export function OwnerForm({ owner }: { owner: { display_name: string; line_user_
   return <form action={action} className="stack"><label>ชื่อที่เพื่อนเรียก<input name="display_name" defaultValue={owner.display_name} required maxLength={60}/></label><label>LINE user ID ของคุณ<input name="line_user_id" defaultValue={owner.line_user_id || ""} placeholder="U + 32 ตัวอักษร" maxLength={33}/></label><small>ใช้ ID จาก Messaging API channel เดียวกับ PP และต้องอยู่ในกลุ่มที่จะให้แท็ก</small><button disabled={pending}>บันทึกเจ้าของ</button><p role="status" className="form-status">{state.message}</p></form>;
 }
 export type Permission = { group_id: string; label: string; enabled: boolean; allow_owner_mention: boolean };
+export function UnknownReplyForm({ values }: { values: string[] }) {
+  const [state, action, pending] = useActionState(saveUnknownReply, initial);
+  const [items, setItems] = useState(() => values.map((text, id) => ({ id, text })));
+  const nextId = useRef(values.length);
+  return <form action={action} className="stack reply-settings">
+    <small>บอทสุ่มใช้ครั้งละ 1 ข้อความเมื่อไม่พบคำตอบ ทั้งในกลุ่มและแชตส่วนตัวกับบอท</small>
+    <div className="reply-options">{items.map((item, index) => <div className="reply-option" key={item.id}>
+      <label>ข้อความที่ {index + 1}<textarea name="unknown_replies" value={item.text} onChange={event => setItems(current => current.map(row => row.id === item.id ? { ...row, text: event.target.value } : row))} required maxLength={2000} rows={3} disabled={pending} placeholder="พิมพ์ข้อความที่อยากให้น้องโจอาตอบ"/></label>
+      <button type="button" className="secondary danger" aria-label={`ลบข้อความที่ ${index + 1}`} disabled={pending || items.length === 1} onClick={() => setItems(current => current.filter(row => row.id !== item.id))}>ลบ</button>
+    </div>)}</div>
+    <div className="reply-actions"><button type="button" className="secondary" disabled={pending || items.length >= MAX_UNKNOWN_REPLIES} onClick={() => { const id = nextId.current++; setItems(current => [...current, { id, text: "" }]); }}>เพิ่มข้อความ</button>
+      <small>{items.length} / {MAX_UNKNOWN_REPLIES} ข้อความ</small><button disabled={pending}>{pending ? "กำลังบันทึก…" : "บันทึกข้อความ"}</button></div>
+    <p role="status" className={state.ok ? "form-status success" : "form-status"}>{state.message}</p>
+  </form>;
+}
 export function PermissionForm({ permission }: { permission?: Permission }) {
   const [state, action, pending] = useActionState(savePermission, initial);
   return <form action={action} className="stack"><label>ชื่อกลุ่ม<input name="label" maxLength={80} defaultValue={permission?.label} placeholder="กลุ่มเพื่อนสนิท"/></label><label>LINE group ID<input name="group_id" required readOnly={!!permission} defaultValue={permission?.group_id} placeholder="C + 32 ตัวอักษร" maxLength={33}/></label><label className="check"><input type="checkbox" name="enabled" defaultChecked={permission?.enabled}/>อนุญาตให้ PP ตอบในกลุ่มนี้</label><label className="check"><input type="checkbox" name="allow_owner_mention" defaultChecked={permission?.allow_owner_mention ?? true}/>อนุญาตให้เรียกเจ้าของมาตอบ</label><button disabled={pending}>บันทึกสิทธิ์กลุ่ม</button><p role="status" className="form-status">{state.message}</p></form>;

@@ -5,18 +5,25 @@ import { requireAdmin } from "@/lib/auth";
 import { database, dbError } from "@/lib/db";
 import { groupId, userId } from "@/lib/line";
 import { memoryInput } from "@/lib/validation";
-import { normalizeQuestion } from "@/lib/policy";
+import { validateAttachments, attachmentIds } from "@/lib/library";
+import { MAX_ATTACHMENTS } from "@/lib/attachment-limits";
+import { normalizeQuestion, MAX_UNKNOWN_REPLIES } from "@/lib/policy";
 export type ActionState = { ok: boolean; message: string };
 function input(form: FormData, name: string) { return String(form.get(name) ?? ""); }
 export async function saveMemory(_: ActionState, form: FormData): Promise<ActionState> {
   await requireAdmin();
-  const parsed = memoryInput.safeParse({ title: input(form, "title"), content: input(form, "content"), visibility: input(form, "visibility"), aliases: input(form, "aliases").split(/\r?\n/).filter(Boolean), expires_at: input(form, "expires_at") ? `${input(form, "expires_at")}T23:59:59+07:00` : null });
+  // Reject a stale form's explicit private request instead of silently publishing it.
+  if (form.has("visibility") && input(form, "visibility") !== "shareable") return { ok: false, message: "หน้าตั้งค่ามีการเปลี่ยนแปลง กรุณารีเฟรชหน้าแล้วลองอีกครั้ง" };
+  const parsed = memoryInput.safeParse({ title: input(form, "title"), content: input(form, "content"), mention_owner: form.get("mention_owner") === "on", aliases: input(form, "aliases").split(/\r?\n/).filter(Boolean), expires_at: input(form, "expires_at") ? `${input(form, "expires_at")}T23:59:59+07:00` : null });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง" };
   const id = input(form, "id");
   if (id && !z.uuid().safeParse(id).success) return { ok: false, message: "รหัส memory ไม่ถูกต้อง" };
-  const value = { ...parsed.data, aliases: [...new Set(parsed.data.aliases.map(normalizeQuestion))], question_examples: parsed.data.aliases, updated_at: new Date().toISOString() };
+  const attachments = attachmentIds.safeParse(form.getAll("attachment_ids").map(String));
+  if (!attachments.success || !await validateAttachments(attachments.data, "shareable")) return { ok: false, message: `เลือกไฟล์ที่ใช้ตอบในกลุ่มได้สูงสุด ${MAX_ATTACHMENTS} ไฟล์` };
+  const value = { ...parsed.data, attachment_ids: attachments.data, aliases: [...new Set(parsed.data.aliases.map(normalizeQuestion))], question_examples: parsed.data.aliases, updated_at: new Date().toISOString() };
   const db = database();
-  const result = id ? await db.from("memories").update(value).eq("id", id) : await db.from("memories").insert(value);
+  // Existing visibility is retained for legacy records; only new memories are published.
+  const result = id ? await db.from("memories").update(value).eq("id", id) : await db.from("memories").insert({ ...value, visibility: "shareable" });
   if (result.error) return { ok: false, message: "บันทึกไม่สำเร็จ ลองอีกครั้ง" };
   revalidatePath("/admin");
   return { ok: true, message: "บันทึกความจำแล้ว" };
@@ -33,7 +40,18 @@ export async function saveOwner(_: ActionState, form: FormData): Promise<ActionS
   if (!parsed.success) return { ok: false, message: "ชื่อหรือ LINE user ID ไม่ถูกต้อง (U ตามด้วยเลขฐานสิบหก 32 ตัว)" };
   const { error } = await database().from("owner").upsert({ id: 1, ...parsed.data });
   if (error) return { ok: false, message: "บันทึกไม่สำเร็จ" };
-  revalidatePath("/admin"); return { ok: true, message: "บันทึกเจ้าของแล้ว" };
+  revalidatePath("/admin", "layout"); return { ok: true, message: "บันทึกเจ้าของแล้ว" };
+}
+export async function saveUnknownReply(_: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const parsed = z.array(z.string().trim().min(1, "กรอกข้อความให้ครบ หรือลบช่องที่ไม่ใช้").max(2000, "แต่ละข้อความยาวได้ไม่เกิน 2,000 ตัวอักษร"))
+    .min(1, "เพิ่มข้อความอย่างน้อย 1 ชุด").max(MAX_UNKNOWN_REPLIES, `เพิ่มได้สูงสุด ${MAX_UNKNOWN_REPLIES} ข้อความ`)
+    .safeParse(form.getAll("unknown_replies"));
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+  const { error, data } = await database().from("owner").update({ unknown_replies: parsed.data, unknown_reply: parsed.data[0] }).eq("id", 1).select("id").single();
+  if (error || !data) return { ok: false, message: "บันทึกไม่สำเร็จ ลองอีกครั้ง" };
+  revalidatePath("/admin/settings");
+  return { ok: true, message: "บันทึกข้อความแล้ว" };
 }
 export async function savePermission(_: ActionState, form: FormData): Promise<ActionState> {
   await requireAdmin();
@@ -41,12 +59,12 @@ export async function savePermission(_: ActionState, form: FormData): Promise<Ac
   if (!parsed.success) return { ok: false, message: "Group ID ต้องขึ้นต้น C และตามด้วยเลขฐานสิบหก 32 ตัว" };
   const { error } = await database().from("permissions").upsert({ ...parsed.data, enabled: form.get("enabled") === "on", allow_owner_mention: form.get("allow_owner_mention") === "on" });
   if (error) return { ok: false, message: "บันทึกไม่สำเร็จ" };
-  revalidatePath("/admin"); return { ok: true, message: "บันทึกสิทธิ์กลุ่มแล้ว" };
+  revalidatePath("/admin", "layout"); return { ok: true, message: "บันทึกสิทธิ์กลุ่มแล้ว" };
 }
 export async function saveFriend(form: FormData) {
   await requireAdmin();
   const id = z.uuid().parse(input(form, "id"));
   const display_name = z.string().trim().max(80).parse(input(form, "display_name"));
   const { error } = await database().from("friends").update({ display_name, blocked: form.get("blocked") === "on" }).eq("id", id);
-  dbError(error); revalidatePath("/admin");
+  dbError(error); revalidatePath("/admin", "layout");
 }

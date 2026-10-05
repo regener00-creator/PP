@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
@@ -16,10 +17,11 @@ export async function authClient() {
     }
   });
 }
-export async function requireAdmin() {
+// Deduplicate layout/page checks within this render only, never across requests.
+export const requireAdmin = cache(async (returnTo?: string) => {
   if (!adminConfigured()) redirect("/setup");
   const client = await authClient();
   const { data, error } = await client.auth.getUser();
-  if (error || !data.user || data.user.id !== required("ADMIN_USER_ID")) redirect("/login");
+  if (error || !data.user || data.user.id !== required("ADMIN_USER_ID")) redirect(returnTo ? `/login?next=${encodeURIComponent(returnTo)}` : "/login");
   return data.user;
-}
+});
