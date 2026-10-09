@@ -37,8 +37,8 @@ export async function deleteFile(_:ActionState,form:FormData):Promise<ActionStat
 }
 export async function saveCalendarEvent(_:ActionState,form:FormData):Promise<ActionState>{
   await requireAdmin();
-  const parsed=z.object({title:z.string().trim().min(1).max(120),event_date:z.iso.date(),message:z.string().trim().min(1).max(1500),group_id:groupId.nullable(),mention_user_id:userId.nullable(),attachment_ids:attachmentIds}).safeParse({title:value(form,"title"),event_date:value(form,"event_date"),message:value(form,"message"),group_id:value(form,"group_id")||null,mention_user_id:value(form,"mention_user_id")||null,attachment_ids:form.getAll("attachment_ids").map(String)});
-  if(!parsed.success)return {ok:false,message:"ตรวจชื่อ วันที่ ข้อความ และไฟล์แนบอีกครั้ง"};
+  const parsed=z.object({title:z.string().trim().min(1).max(120),event_date:z.iso.date(),reminder_time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),message:z.string().trim().min(1).max(1500),group_id:groupId.nullable(),mention_user_id:userId.nullable(),attachment_ids:attachmentIds}).safeParse({title:value(form,"title"),event_date:value(form,"event_date"),reminder_time:value(form,"reminder_time")||"08:00",message:value(form,"message"),group_id:value(form,"group_id")||null,mention_user_id:value(form,"mention_user_id")||null,attachment_ids:form.getAll("attachment_ids").map(String)});
+  if(!parsed.success)return {ok:false,message:"ตรวจชื่อ วันที่ เวลา ข้อความ และไฟล์แนบอีกครั้ง"};
   const flags={annual:form.has("annual"),enabled:true,remind_day:form.has("remind_day"),remind_before:form.has("remind_before"),send_owner:form.has("send_owner")};
   if((!flags.send_owner && !parsed.data.group_id)||(!flags.remind_day && !flags.remind_before))return {ok:false,message:"เลือกผู้รับและวันที่แจ้งเตือนอย่างน้อยหนึ่งรายการ"};
   const db=database();
@@ -52,7 +52,7 @@ export async function saveCalendarEvent(_:ActionState,form:FormData):Promise<Act
   const id=value(form,"id");if(id && !z.uuid().safeParse(id).success)return {ok:false,message:"รหัสรายการไม่ถูกต้อง"};
   const data={...parsed.data,...flags,updated_at:new Date().toISOString()};
   const r=id?await db.from("calendar_events").update(data).eq("id",id):await db.from("calendar_events").insert(data);
-  return r.error?{ok:false,message:r.error.message.includes("PP_CALENDAR_LIMIT")?"ปฏิทินเต็ม 100 รายการ ลบรายการเก่าก่อนเพิ่มใหม่":"บันทึกไม่ได้ ลองอีกครั้ง"}:success("บันทึกและเปิดแจ้งเตือนช่วง 08:00–09:00 น. แล้ว");
+  return r.error?{ok:false,message:r.error.message.includes("PP_CALENDAR_LIMIT")?"ปฏิทินเต็ม 100 รายการ ลบรายการเก่าก่อนเพิ่มใหม่":"บันทึกไม่ได้ ลองอีกครั้ง"}:success(`บันทึกและเปิดแจ้งเตือนเวลา ${parsed.data.reminder_time} น. (เวลาไทย) แล้ว`);
 }
 export async function deleteCalendarEvent(_:ActionState,form:FormData):Promise<ActionState>{
   await requireAdmin();const id=z.uuid().parse(value(form,"id"));const r=await database().from("calendar_events").delete().eq("id",id);dbError(r.error);return success("ลบรายการแล้ว");

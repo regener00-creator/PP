@@ -1,22 +1,12 @@
 import "server-only";
 import { database, dbError } from "./db";
-import { thaiDate, addDays } from "./calendar";
+import { timedDueDates } from "./calendar";
 import { lineJson, quotaStatus, pushOnce } from "./reminders";
 import { assistantAllowed } from "./assistant";
 import type { AssistantEvent } from "./assistant-types";
 import type { LineMessage } from "./line";
 export async function sendAssistantReminders(now = new Date()) {
-  const hour = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Asia/Bangkok",
-      hour: "2-digit",
-      hourCycle: "h23",
-    }).format(now),
-  );
-  if (hour !== 8)
-    return { sent: 0, failed: 0, skipped: 0, outsideWindow: true };
   const db = database(),
-    today = thaiDate(now),
     started = Date.now(),
     totals = { sent: 0, failed: 0, skipped: 0, deferred: 0 };
   // page through all scopes; never let the first family's old events starve others.
@@ -30,16 +20,8 @@ export async function sendAssistantReminders(now = new Date()) {
     dbError(r.error);
     const events = (r.data || []) as AssistantEvent[];
     for (const e of events)
-      for (const lead of [0, ...(e.remind_before ? [1] : [])]) {
-        const occurs = addDays(today, lead);
-        if (
-          occurs < e.event_date ||
-          (e.annual
-            ? occurs.slice(5) !== e.event_date.slice(5)
-            : occurs !== e.event_date)
-        )
-          continue;
-        if (Date.now() - started > 180000) {
+      for (const {lead,occurs} of timedDueDates({ ...e, remind_day: true }, now)) {
+        if (Date.now() - started > 90000) {
           totals.deferred++;
           continue;
         }
@@ -55,6 +37,7 @@ export async function sendAssistantReminders(now = new Date()) {
           retry_key: string;
           attempts: number;
           payload: LineMessage[];
+          event_revision?: string;
         };
         let result = "delivery_error";
         try {
@@ -68,6 +51,8 @@ export async function sendAssistantReminders(now = new Date()) {
           if (
             !fresh ||
             !fresh.enabled ||
+            (d.event_revision && Date.parse(d.event_revision) !== Date.parse(fresh.updated_at || "")) ||
+            !timedDueDates({ ...fresh, remind_day: true }, now).some(due => due.lead === lead && due.occurs === occurs) ||
             JSON.stringify(d.payload) !==
               JSON.stringify([
                 {
@@ -82,6 +67,7 @@ export async function sendAssistantReminders(now = new Date()) {
               fresh.scope_key,
               fresh.remind_before,
               fresh.annual,
+              fresh.reminder_time,
             ]) !==
               JSON.stringify([
                 e.title,
@@ -90,6 +76,7 @@ export async function sendAssistantReminders(now = new Date()) {
                 e.scope_key,
                 e.remind_before,
                 e.annual,
+                e.reminder_time,
               ]) ||
             !(await assistantAllowed({
               sender: e.sender_id,
@@ -130,7 +117,7 @@ export async function sendAssistantReminders(now = new Date()) {
         dbError(finish.error);
         totals[status]++;
       }
-    if (events.length < 100 || Date.now() - started > 180000) break;
+    if (events.length < 100 || Date.now() - started > 90000) break;
   }
   return totals;
 }

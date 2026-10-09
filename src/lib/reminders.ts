@@ -1,7 +1,7 @@
 import "server-only";
 import { database,dbError } from "./db";
 import { required } from "./env";
-import { dueDates,thaiDate,type CalendarEvent } from "./calendar";
+import { timedDueDates,type CalendarEvent } from "./calendar";
 import { ownerInGroup,mentionOwner,type LineMessage } from "./line";
 import { fileMessages,validateAttachments } from "./library";
 export async function lineJson(path:string) {
@@ -28,15 +28,14 @@ export async function pushOnce(target:string,messages:LineMessage[],retryKey:str
   return "delivery_error";
 }
 export async function sendDueReminders(now=new Date()){
-  const hour=Number(new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Bangkok",hour:"2-digit",hourCycle:"h23"}).format(now));
-  if(hour!==8)return {sent:0,failed:0,skipped:0,outsideWindow:true};
   const db=database(); const owner=await db.from("owner").select("line_user_id").eq("id",1).single();dbError(owner.error);
   const events=await db.from("calendar_events").select("*").eq("enabled",true).order("id").limit(100);dbError(events.error);
-  const totals={sent:0,failed:0,skipped:0};
+  const totals={sent:0,failed:0,skipped:0}; const started=Date.now();
   for(const event of (events.data||[]) as CalendarEvent[]){
-    for(const due of dueDates(event,thaiDate(now))){
+    for(const due of timedDueDates(event,now)){
       const targets=[...(event.send_owner && owner.data?.line_user_id?[owner.data.line_user_id]:[]),...(event.group_id?[event.group_id]:[])];
       for(const target of targets){
+        if(Date.now()-started>90000)return totals;
         const claim=await db.rpc("pp_claim_reminder",{p_event:event.id,p_occurs:due.occurs,p_lead:due.lead,p_target:target});dbError(claim.error);
         if(!claim.data)continue;
         const delivery=claim.data as {id:string;retry_key:string;attempts:number;payload:LineMessage[]|null;event_revision:string|null};
@@ -45,7 +44,7 @@ export async function sendDueReminders(now=new Date()){
           const current=await db.from("calendar_events").select("*").eq("id",event.id).maybeSingle();dbError(current.error);
           const e=current.data as CalendarEvent|null;
           const isGroup=target.startsWith("C");
-          const stillDue=e && dueDates(e,thaiDate(now)).some(d=>d.occurs===due.occurs && d.lead===due.lead);
+          const stillDue=e && timedDueDates(e,now).some(d=>d.occurs===due.occurs && d.lead===due.lead);
           const freshOwner=await db.from("owner").select("line_user_id").eq("id",1).single();dbError(freshOwner.error);
           if(!e || !stillDue || (delivery.payload && Date.parse(delivery.event_revision||"")!==Date.parse(e.updated_at||"")) || (isGroup?e.group_id!==target:!e.send_owner || freshOwner.data?.line_user_id!==target)) result="changed";
           else{

@@ -11,6 +11,7 @@ const target = z.object({ id: z.uuid(), group: groupId.nullable() });
 const fields = z.object({
   title: z.string().trim().min(1).max(120),
   event_date: z.iso.date(),
+  reminder_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   content: z.string().trim().min(1).max(1500),
 });
 function refresh() {
@@ -20,9 +21,9 @@ export async function saveCalendarAppointment(_: State, form: FormData): Promise
   await requireAdmin();
   const parsed = target.extend(fields.shape).safeParse({
     id: form.get("id"), group: form.get("group") || null,
-    title: form.get("title"), event_date: form.get("event_date"), content: form.get("content"),
+    reminder_time: form.get("reminder_time") || "08:00", title: form.get("title"), event_date: form.get("event_date"), content: form.get("content"),
   });
-  if (!parsed.success) return { ok: false, message: "ตรวจชื่อ วันที่ และข้อความอีกครั้งครับ" };
+  if (!parsed.success) return { ok: false, message: "ตรวจชื่อ วันที่ เวลา และข้อความอีกครั้งครับ" };
   try {
     const { id, group, ...values } = parsed.data;
     const scope = await adminAssistantScope(group);

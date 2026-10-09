@@ -19,7 +19,7 @@
 
 สมุดจำใหม่ของ DM แยกตาม LINE user ID; สมุดในกลุ่มใช้ร่วมกันเฉพาะกลุ่มนั้น ไม่ถูกนำไปตอบ DM หรือกลุ่มอื่น ปฏิทินบนเว็บรวมนัดหมายของเจ้าของและกลุ่มที่เปิดใช้งาน รายการส่วนตัวของเพื่อนจะไม่ปรากฏในเว็บเจ้าของ ประวัติที่ส่งให้เลขาอ่านมีเฉพาะบทสนทนาที่เรียกเลขาใน thread ของผู้ส่ง เก็บ 30 วัน ไม่เก็บบทสนทนากลุ่มทั่วไปเพื่อเรียนรู้
 
-การแจ้งเตือนใช้ Vercel Hobby เวลาเดิม **08:00–09:00 น. (เวลาไทย)** วันนัดและก่อนหนึ่งวันเมื่อเลือก ไม่ใช่การแจ้งเตือนตรงนาที เวลาเช่น 14:00 เป็นรายละเอียดนัดหมาย ไม่ส่งคำเชิญหรือทำปฏิทินภายนอก ส่งเฉพาะ DM ของผู้ขอหรือกลุ่มปัจจุบัน ตรวจสิทธิ์และโควตา LINE ซ้ำก่อนส่ง พร้อม retry key/payload เดิมเพื่อกันส่งซ้ำ
+การแจ้งเตือนเลือกเวลาได้รายรายการ (เวลาไทย) ตั้งต้น 08:00 น. ทั้งรายการที่สร้างเองและนัดหมายจากเลขา เลือกเตือนล่วงหน้า 1 วันจะใช้เวลาเดียวกันในวันก่อนหน้า Supabase Cron ตรวจทุกนาทีและเรียก Vercel เฉพาะเมื่อมีงานค้างถึงเวลา ส่งได้ช้าตามเครือข่าย มีช่วง retry ไม่เกิน 10 นาที รวมกรณีข้ามเที่ยงคืน ไม่ส่งรายการเก่าที่พ้นช่วงนี้ ป้องกันซ้ำด้วย delivery lease และ LINE retry key เดิม ก่อนส่งตรวจผู้รับ สิทธิ์ และโควตา LINE ซ้ำ
 
 ใช้ migration ใหม่ `20261009065258_personal_secretary.sql` เพียงชุดเดียว เพิ่มตาราง `pp.assistant_*` และฟังก์ชัน server-only/RLS ไม่แตะความทรงจำ ปฏิทินเดิม `public` schema หรือทรัพยากรอื่น ไม่รัน migrations เก่าซ้ำ สมุดละไม่เกิน 200 ความจำ / 100 นัดหมาย
 
@@ -105,7 +105,7 @@ Migration `20261001070842_pp_shareable_defaults.sql` เปลี่ยนเฉ
 - เก็บไฟล์ใน Supabase Storage bucket **pp-files** ซึ่งไม่เป็น public; ลบไฟล์/ลบ parent/ปิดกลุ่มจะปิดลิงก์กลุ่มเดิมด้วย แต่ไม่ลบสำเนาที่ดาวน์โหลดหรือส่งไปแล้ว
 - เมนู **ปฏิทิน** เพิ่มวันเกิดหรือนัดหมาย เลือกทุกปี/เตือนวันนั้น/ก่อน 1 วัน ส่งส่วนตัวและ/หรือกลุ่มที่อนุมัติ แท็กเพื่อนที่ระบบรู้จักจากข้อความในกลุ่มได้ จำกัด 100 รายการ
 - บันทึกรายการปฏิทินแล้วเปิดแจ้งเตือนอัตโนมัติทันที ไม่ต้องติ๊กสวิตช์เปิดอีก เลือกวันเตือนและผู้รับอย่างน้อยหนึ่งช่อง การเลือกวันเตือนใช้กับทุกปลายทางที่เลือก; รายการเก่าที่เคยปิดจะเปิดเมื่อบันทึกรายการนั้นอีกครั้ง
-- แจ้งเตือนช่วง **08:00–09:00 น. เวลาไทย** ตาม Vercel Hobby Cron วันละครั้ง ไม่รองรับเวลารายรายการหรือส่งย้อนหลังวันถัดไป รายการ 29 ก.พ. เกิดเฉพาะปีอธิกสุรทิน
+- เลือกเวลาแจ้งเตือนได้จากช่อง **เวลาแจ้งเตือน** เช่น 13:00 น. ตัวตรวจทำงานทุกนาที แม้ปิดหน้าเว็บ/คอมพิวเตอร์ รายการ 29 ก.พ. ทำซ้ำเฉพาะปีอธิกสุรทิน รายการที่สั่งใหม่ใน LINE ยังตั้งต้น 08:00 น.; เวลาในข้อความนัดหมายไม่เปลี่ยนเวลาเตือนอัตโนมัติ ให้แก้ผ่านปฏิทิน
 - หน้า Calendar แสดงโควตา LINE และผลส่งล่าสุด Push คิดจำนวนผู้รับ; Reply API ที่ใช้ตอบคำถามไม่หักโควตานี้
 
 ## เริ่มใช้งาน deployment นี้
@@ -277,3 +277,7 @@ reminder_deliveries เก็บ request body เฉพาะเพื่อส�
 ## Content Planner — นำออกแล้ว
 
 ข้อมูลและ migrations ของรุ่นก่อนยังอยู่ แต่ไม่มีหน้าใช้งาน การสร้างด้วย AI หรือการส่งเตือน รายละเอียดประวัติอยู่ใน HANDOFF.md
+
+### Minute reminder dispatcher
+
+Migrations `20261009130907_pp_calendar_reminder_time.sql` and `20261009130918_pp_minute_reminder_scheduler.sql` add validated HH:mm fields and a PP-only Supabase Cron job. Scheduler token is generated in Postgres Vault; the app can verify its hash through a service-role-only RPC, but cannot dispatch Cron or read the Vault token. No new Vercel credential is required. `/api/reminders/tick` accepts authenticated POST; `?probe=1` checks connectivity without sending. Create the job disabled, deploy, run `select pp.pp_dispatch_reminder_tick(true)`, inspect its `net._http_response` for 200/probe, then enable config and the named Cron job. Existing `/api/reminders` remains protected by CRON_SECRET for operations; its daily Vercel schedule is removed. Only PP cron history older than 7 days is cleaned.

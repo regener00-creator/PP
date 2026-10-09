@@ -14,7 +14,7 @@ describe("content database isolation and delivery idempotency", () => {
     );
     const dir = new URL("../supabase/migrations/", import.meta.url);
     for (const f of readdirSync(dir)
-      .filter((f) => f.endsWith(".sql"))
+      .filter((f) => f.endsWith(".sql") && !f.endsWith("_pp_minute_reminder_scheduler.sql")) // Cloud extensions covered by reminder-time-database.test.ts.
       .sort())
       await db.exec(readFileSync(new URL(f, dir), "utf8"));
   }, 30000);

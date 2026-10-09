@@ -37,6 +37,8 @@ export type AssistantEvent = {
   title: string;
   content: string;
   event_date: string;
+  reminder_time?: string;
+  updated_at?: string;
   annual: boolean;
   remind_before: boolean;
   scope_key: string;
@@ -73,5 +75,5 @@ export function proposalText(p: Proposal, group: boolean) {
   const audience = group ? "ใช้ร่วมกันในกลุ่มนี้" : "แชตส่วนตัวของคุณ";
   return p.kind === "remember"
     ? `จะจำไว้ใน${audience}\n${p.title}\n${p.content}\n\nพิมพ์ ยืนยัน เพื่อบันทึก หรือ ยกเลิก`
-    : `จะบันทึกนัดหมายใน${audience}\n${p.title}\nวันที่ ${p.date}${p.annual ? " · ทำซ้ำทุกปี" : ""}\n${p.content}\nเตือนวันนัด${p.before ? "และก่อน 1 วัน" : ""} ช่วง 08:00–09:00 น. (เวลาไทย)\n\nพิมพ์ ยืนยัน เพื่อบันทึก หรือ ยกเลิก`;
+    : `จะบันทึกนัดหมายใน${audience}\n${p.title}\nวันที่ ${p.date}${p.annual ? " · ทำซ้ำทุกปี" : ""}\n${p.content}\nเตือนวันนัด${p.before ? "และก่อน 1 วัน" : ""} เวลา 08:00 น. (เวลาไทย) · เปลี่ยนเวลาได้ในปฏิทิน\n\nพิมพ์ ยืนยัน เพื่อบันทึก หรือ ยกเลิก`;
 }

@@ -6,7 +6,7 @@ vi.mock("../src/lib/line",async original=>({...await original<typeof import("../
 import {database} from "../src/lib/db";
 import {validateAttachments} from "../src/lib/library";
 import {pushOnce,sendDueReminders} from "../src/lib/reminders";
-const owner="U"+"a".repeat(32),group="C"+"c".repeat(32),now=new Date("2026-10-10T01:30:00Z"),revision="2026-10-01T00:00:00Z";
+const owner="U"+"a".repeat(32),group="C"+"c".repeat(32),now=new Date("2026-10-10T01:05:00Z"),revision="2026-10-01T00:00:00Z";
 let event:Record<string,unknown>,current:Record<string,unknown>,delivery:Record<string,unknown>,updates:Record<string,unknown>[],pushes:RequestInit[],used:number,enabled:boolean;
 beforeEach(()=>{
   vi.clearAllMocks();process.env.LINE_CHANNEL_ACCESS_TOKEN="test";updates=[];pushes=[];used=0;enabled=true;
@@ -35,8 +35,8 @@ describe("reminder delivery",()=>{
     delivery.payload=[{type:"text",text:"old"}];delivery.event_revision="2026-09-01";await sendDueReminders(now);expect(pushes).toHaveLength(0);expect(updates.at(-1)?.reason).toBe("changed");
     delivery.payload=null;vi.mocked(validateAttachments).mockResolvedValue(false);await sendDueReminders(now);expect(pushes).toHaveLength(0);
   });
-  it("does not send outside the morning window or after disabling a due event",async()=>{
-    expect(await sendDueReminders(new Date("2026-10-10T02:00:00Z"))).toMatchObject({outsideWindow:true});expect(database).not.toHaveBeenCalled();current.enabled=false;await sendDueReminders(now);expect(pushes).toHaveLength(0);
+  it("does not send after its time window or after disabling a due event",async()=>{
+    expect(await sendDueReminders(new Date("2026-10-10T02:00:00Z"))).toMatchObject({sent:0});current.enabled=false;await sendDueReminders(now);expect(pushes).toHaveLength(0);
   });
   it("checks group approval and recipient-count quota before a group push",async()=>{
     event.send_owner=false;event.group_id=group;current={...event};used=295;

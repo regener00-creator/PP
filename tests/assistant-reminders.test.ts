@@ -81,16 +81,16 @@ beforeEach(() => {
     return q;
   });
 });
-it("outside the Thai morning window does not access data or LINE", async () => {
+it("does not claim or send after the scheduled retry window", async () => {
   expect(
     await sendAssistantReminders(new Date("2026-10-09T03:00:00Z")),
-  ).toMatchObject({ outsideWindow: true });
-  expect(state.from).not.toHaveBeenCalled();
+  ).toMatchObject({ sent: 0 });
+  expect(state.rpc).not.toHaveBeenCalled();
   expect(state.push).not.toHaveBeenCalled();
 });
 it("pushes to the scoped recipient with the durable payload and retry key", async () => {
   expect(
-    await sendAssistantReminders(new Date("2026-10-09T01:20:00Z")),
+    await sendAssistantReminders(new Date("2026-10-09T01:05:00Z")),
   ).toMatchObject({ sent: 1 });
   expect(state.push).toHaveBeenCalledWith(
     event.scope_key,
@@ -101,13 +101,13 @@ it("pushes to the scoped recipient with the durable payload and retry key", asyn
 it("revoked membership cannot receive a pending reminder", async () => {
   state.allowed.mockResolvedValue(false);
   expect(
-    await sendAssistantReminders(new Date("2026-10-09T01:20:00Z")),
+    await sendAssistantReminders(new Date("2026-10-09T01:05:00Z")),
   ).toMatchObject({ skipped: 1 });
   expect(state.push).not.toHaveBeenCalled();
 });
 it("changed appointment or persisted payload cannot send stale content", async () => {
   state.changed = true;
-  await sendAssistantReminders(new Date("2026-10-09T01:20:00Z"));
+  await sendAssistantReminders(new Date("2026-10-09T01:05:00Z"));
   expect(state.push).not.toHaveBeenCalled();
   state.changed = false;
   state.rpc.mockResolvedValue({
@@ -119,20 +119,20 @@ it("changed appointment or persisted payload cannot send stale content", async (
       payload: [{ type: "text", text: "OLD_PAYLOAD_CANARY" }],
     },
   });
-  await sendAssistantReminders(new Date("2026-10-09T01:20:00Z"));
+  await sendAssistantReminders(new Date("2026-10-09T01:05:00Z"));
   expect(state.push).not.toHaveBeenCalled();
 });
 it("quota exhaustion skips a send without pretending success", async () => {
   state.quota.mockResolvedValue({ limit: 100, used: 100 });
   expect(
-    await sendAssistantReminders(new Date("2026-10-09T01:20:00Z")),
+    await sendAssistantReminders(new Date("2026-10-09T01:05:00Z")),
   ).toMatchObject({ skipped: 1, sent: 0 });
   expect(state.push).not.toHaveBeenCalled();
 });
 it("failed deliveries retain their same retry key on retry", async () => {
   state.push.mockResolvedValue("delivery_error");
   expect(
-    await sendAssistantReminders(new Date("2026-10-09T01:20:00Z")),
+    await sendAssistantReminders(new Date("2026-10-09T01:05:00Z")),
   ).toMatchObject({ failed: 1 });
   expect(state.updates).toContainEqual(
     expect.objectContaining({ status: "failed" }),

@@ -169,8 +169,10 @@ function EventEditor({event,date,groups,friends,files,folders,owner}:{event?:Cal
       <div className="calendar-editor-heading">
         <label className="calendar-title-field">เรื่อง<input name="title" required maxLength={120} defaultValue={event?.title} placeholder="เช่น วันเกิดพี่ฟิ้ง"/></label>
         <label>วันที่<input name="event_date" type="date" required defaultValue={event?.event_date||date}/></label>
+        <label>เวลาแจ้งเตือน<input name="reminder_time" type="time" step="60" required defaultValue={(event?.reminder_time || "08:00").slice(0,5)}/></label>
         <label className="calendar-toggle"><input name="annual" type="checkbox" defaultChecked={event?.annual}/>ทำซ้ำทุกปี</label>
       </div>
+      <small>เวลาไทย · เตือนล่วงหน้า 1 วันจะใช้เวลาเดียวกัน</small>
       <label>ข้อความที่จะส่ง<textarea name="message" required maxLength={1500} rows={3} defaultValue={event?.message} placeholder="เช่น HBD พี่ฟิ้ง"/></label>
       <div className="calendar-reminder-options">
         <label className="calendar-toggle"><input type="checkbox" name="remind_day" defaultChecked={event?.remind_day??true}/>เตือนในวันนั้น</label>
@@ -224,7 +226,7 @@ export function CalendarBoard({events,today,groups,friends,files,folders,owner,c
         return <div key={date} className={`calendar-day ${date===today?"today":""}`}>
           <button className="calendar-date" aria-label={`เพิ่มรายการวันที่ ${date}`} onClick={()=>setSelected({id:"new",date})}>{i+1}</button>
           <div className="calendar-day-events">
-            {matching.filter(e=>occursOn(e,date)).map(e=><button className={`calendar-event ${e.enabled?"active":""}`} key={e.id} onClick={()=>setSelected({id:e.id,date})}>{e.title}</button>)}
+            {matching.filter(e=>occursOn(e,date)).map(e=><button className={`calendar-event ${e.enabled?"active":""}`} key={e.id} onClick={()=>setSelected({id:e.id,date})}>{(e.reminder_time || "08:00").slice(0,5)} · {e.title}</button>)}
           </div>
         </div>;
       })}
@@ -237,7 +239,7 @@ export function CalendarBoard({events,today,groups,friends,files,folders,owner,c
       <div className="section-heading"><h2>รายการทั้งหมด</h2></div>
       <TilePages key={q} items={matching} label="รายการทั้งหมด" renderItem={e=>
         <button type="button" key={e.id} className={`memory-tile calendar-item-tile ${e.enabled?"enabled":""}`} title={e.title} onClick={()=>setSelected({id:e.id,date:e.event_date})}>
-          <strong>{e.title}</strong><span className="calendar-item-details"><time dateTime={e.event_date}>{e.event_date}</time>{e.assistant && <span>นัดหมายจากเลขา</span>}{e.annual && <span>ทำซ้ำทุกปี</span>}<span>{e.enabled?"เปิดแจ้งเตือน":"ยังไม่แจ้งเตือน"}</span></span>
+          <strong>{e.title}</strong><span className="calendar-item-details"><time dateTime={e.event_date}>{e.event_date} · {(e.reminder_time || "08:00").slice(0,5)} น.</time>{e.assistant && <span>นัดหมายจากเลขา</span>}{e.annual && <span>ทำซ้ำทุกปี</span>}<span>{e.enabled?"เปิดแจ้งเตือน":"ยังไม่แจ้งเตือน"}</span></span>
         </button>
       }/>
       {!matching.length && <p>ยังไม่มีรายการ</p>}

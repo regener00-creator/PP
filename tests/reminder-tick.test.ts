@@ -1,0 +1,11 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const mock=vi.hoisted(()=>({rpc:vi.fn(),manual:vi.fn(),assistant:vi.fn()}));
+vi.mock("../src/lib/db",()=>({database:()=>({rpc:mock.rpc}),dbError:(e:unknown)=>{if(e)throw Error("db");}}));
+vi.mock("../src/lib/reminders",()=>({sendDueReminders:mock.manual}));
+vi.mock("../src/lib/assistant-reminders",()=>({sendAssistantReminders:mock.assistant}));
+import {POST} from "../src/app/api/reminders/tick/route";
+const request=(token="a".repeat(64),probe=false)=>new Request("https://pp.test/api/reminders/tick"+(probe?"?probe=1":""),{method:"POST",headers:{authorization:"Bearer "+token}});
+beforeEach(()=>{vi.clearAllMocks();mock.rpc.mockResolvedValue({data:true,error:null});mock.manual.mockResolvedValue({sent:0});mock.assistant.mockResolvedValue({sent:0});});
+it("rejects absent/malformed and invalid scheduler credentials without sending",async()=>{expect((await POST(request("bad"))).status).toBe(401);expect(mock.rpc).not.toHaveBeenCalled();mock.rpc.mockResolvedValue({data:false,error:null});expect((await POST(request())).status).toBe(401);expect(mock.manual).not.toHaveBeenCalled();});
+it("authenticated probe never executes a delivery",async()=>{expect(await (await POST(request(undefined,true))).json()).toEqual({ok:true,probe:true});expect(mock.manual).not.toHaveBeenCalled();expect(mock.assistant).not.toHaveBeenCalled();});
+it("runs both queues only after authentication and fails closed on database errors",async()=>{expect((await POST(request())).status).toBe(200);expect(mock.manual).toHaveBeenCalledOnce();expect(mock.assistant).toHaveBeenCalledOnce();vi.clearAllMocks();mock.rpc.mockResolvedValue({error:{code:"PGRST303"}});expect((await POST(request())).status).toBe(503);expect(mock.manual).not.toHaveBeenCalled();});

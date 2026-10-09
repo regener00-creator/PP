@@ -353,7 +353,7 @@ it("proposal copy describes scope and the actual reminder window", () => {
     true,
   );
   expect(text).toContain("กลุ่มนี้");
-  expect(text).toContain("08:00–09:00");
+  expect(text).toContain("08:00");
   expect(text).toContain("ก่อน 1 วัน");
   expect(writeIntent("ไม่ต้องจำเรื่องนี้")).toBeNull();
   expect(writeIntent("จำว่า ฉันไม่อยากกินอาหารเผ็ด")).toBe("remember");

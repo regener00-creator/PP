@@ -16,11 +16,13 @@ export function AssistantEventEditor({ event, recipient }: { event: CalendarEntr
       <div className="calendar-editor-heading">
         <label className="calendar-title-field">เรื่อง<input name="title" required maxLength={120} defaultValue={event.title}/></label>
         <label>วันที่<input name="event_date" type="date" required defaultValue={event.event_date}/></label>
+        <label>เวลาแจ้งเตือน<input name="reminder_time" type="time" step="60" required defaultValue={(event?.reminder_time || "08:00").slice(0,5)}/></label>
         <label className="calendar-toggle"><input name="annual" type="checkbox" defaultChecked={event.annual}/>ทำซ้ำทุกปี</label>
       </div>
+      <small>เวลาไทย · เตือนล่วงหน้า 1 วันจะใช้เวลาเดียวกัน</small>
       <label>ข้อความที่จะส่ง<textarea name="content" required maxLength={1500} rows={3} defaultValue={event.message}/></label>
       <div className="calendar-reminder-options">
-        <span>เตือนในวันนัด ช่วง 08:00–09:00 น.</span>
+        <span>เตือนในวันนัด</span>
         <label className="calendar-toggle"><input name="remind_before" type="checkbox" defaultChecked={event.remind_before}/>เตือนล่วงหน้า 1 วัน</label>
       </div>
       <button disabled={saving || deleting}>{saving ? "กำลังบันทึก…" : "บันทึกรายการ"}</button>

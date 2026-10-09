@@ -13,7 +13,7 @@
 
 .calendar-divider{width:100%;margin:18px 0;border:0;border-top:1px solid var(--line)}
 .paginated-tiles{margin-bottom:16px}.tile-pagination{display:flex;align-items:center;justify-content:center;gap:22px;margin:10px 0 22px}.tile-pagination button{padding:9px 18px;font-size:13px;min-width:94px}.tile-pagination button:disabled{cursor:default}.tile-pagination p{margin:0;text-align:center;font-size:13px;color:var(--ink);min-width:125px}.tile-pagination p span{display:block;font-size:11px;color:var(--muted);margin-top:2px}.memory-tile .calendar-item-details{display:grid;gap:2px;white-space:normal;font-size:11px;line-height:1.45;opacity:.8}.calendar-item-tile.enabled{background:#1D332C}.calendar-item-tile.enabled:hover{background:#214535}@media(max-width:1400px){.memory-tile .calendar-item-details{font-size:9px}}@media(max-width:740px){.tile-pagination{gap:10px}.tile-pagination button{padding:8px 10px;min-width:75px}.tile-pagination p{min-width:100px;font-size:12px}.memory-tile .calendar-item-details{font-size:10px}}
-.calendar-editor-heading{display:grid;grid-template-columns:minmax(0,1fr) 220px auto;gap:16px;align-items:end}
+.calendar-editor-heading{display:grid;grid-template-columns:minmax(0,1fr) 190px 150px auto;gap:16px;align-items:end}
 .calendar-editor-heading>label,.calendar-recipient-fields>label{min-width:0}
 .calendar-editor-heading input{min-height:46px}
 .calendar-reminder-options{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
@@ -113,3 +113,5 @@ input::file-selector-button{background:var(--primary-soft);color:var(--ink);bord
 .memory-tile>span:last-child{opacity:1;color:var(--muted)}
 .memory-card .memory-caption{opacity:1}
 .mark{color:var(--on-primary)}
+
+@media(max-width:900px){.calendar-editor-heading{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.calendar-title-field{grid-column:1/-1}.calendar-editor-heading .calendar-toggle{grid-column:1/-1;justify-self:start}}

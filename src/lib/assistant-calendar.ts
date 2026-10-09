@@ -12,6 +12,7 @@ export function calendarAppointment(event: AssistantEvent): CalendarEntry {
     assistant: { id: event.id, group },
     title: event.title,
     event_date: event.event_date,
+    reminder_time: event.reminder_time || "08:00",
     annual: event.annual,
     message: event.content,
     enabled: event.enabled,

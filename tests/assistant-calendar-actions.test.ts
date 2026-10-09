@@ -80,3 +80,5 @@ it("rejects invalid dates and reports missing records instead of claiming succes
   expect((await saveCalendarAppointment(initial,f)).ok).toBe(false);
   expect(row!.title).toBe("เดิม");
 });
+
+it("saves a chosen reminder time and rejects invalid clock values",async()=>{const f=form();f.set("reminder_time","13:00");expect((await saveCalendarAppointment(initial,f)).ok).toBe(true);expect(row?.reminder_time).toBe("13:00");for(const time of ["24:00","12:60","1:00","13:00:01"]){f.set("reminder_time",time);expect((await saveCalendarAppointment(initial,f)).ok).toBe(false);}expect(row?.reminder_time).toBe("13:00");});
