@@ -39,7 +39,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     assistantCalendar(),
     adminAssistantNotes(),
   ]);
-  for (const result of [memories, permissions, files, events, friends, deliveries, folders, owner]) dbError(result.error);
+  for (const [name, result] of Object.entries({ memories, permissions, files, events, friends, deliveries, folders, owner })) dbError(result.error, `admin:${name}`);
   const items = (memories.data || []) as Memory[];
   const groups = (permissions.data || []) as Permission[];
   const calendarEvents: CalendarEntry[] = [...(events.data || []), ...appointments.events]

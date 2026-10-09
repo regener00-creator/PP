@@ -8,6 +8,12 @@ export function database() {
     global: { fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(5000), cache: "no-store" }) }
   });
 }
-export function dbError(error: unknown) {
-  if (error) throw new Error("Database operation failed");
+export function dbError(error: unknown, operation = "database") {
+  if (error) {
+    // Log only the provider's error code and a developer-owned label, never SQL,
+    // queries, credentials, note contents or personal identifiers.
+    const code = typeof error === "object" && "code" in error ? String(error.code) : "unknown";
+    console.error("PP database request failed", { operation, code: /^[A-Z0-9_]{1,24}$/.test(code) ? code : "unknown" });
+    throw new Error("Database operation failed");
+  }
 }
