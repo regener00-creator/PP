@@ -8,7 +8,6 @@ import { database, dbError } from "@/lib/db";
 import { thaiDate, type CalendarEntry, type CalendarDelivery } from "@/lib/calendar";
 import { assistantCalendar } from "@/lib/assistant-calendar";
 import { adminAssistantNotes } from "@/lib/assistant-notes";
-import { AssistantNotesBoard } from "@/components/assistant-notes-board";
 import { MemoryReview } from "@/components/memory-review";
 import { memoryCatalog } from "@/lib/memory-assistant";
 import type { LibraryFolder } from "@/components/attachment-picker";
@@ -50,14 +49,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
   return <>
     <header className="dashboard-heading"><h1>ความทรงจำ</h1></header>
-    <div className="stats memory-stats">
-      <article><span>ความจำทั้งหมดที่แสดง</span><strong>{items.length + notes.length}</strong></article>
-      <article><span>กลุ่มที่เปิดใช้งาน</span><strong>{groups.filter(g => g.enabled).length}</strong></article>
-    </div>
     <CalendarBoard events={calendarEvents} today={thaiDate()} groups={groups} friends={(friends.data || []) as Friend[]} files={libraryFiles} folders={folders.data || []} owner={owner.data || { display_name: "เจ้าของ", line_user_id: null }}>
-      <MemoryBoard key={query} items={items} files={libraryFiles} folders={folders.data || []} query={query}/>
+      <MemoryBoard key={query} items={items} notes={notes} files={libraryFiles} folders={folders.data || []} query={query}/>
       <Suspense fallback={<p role="status">กำลังอ่านรายการที่ต้องตรวจ…</p>}><MemoryReviewLoader files={libraryFiles} folders={folders.data || []}/></Suspense>
-      <AssistantNotesBoard notes={notes}/>
     </CalendarBoard>
     <section className="panel delivery-panel">
       <h2>การแจ้งเตือนล่าสุด</h2>

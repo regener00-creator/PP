@@ -13,6 +13,8 @@ import type { MentionOwner } from "@/lib/friends";
 import { TilePages } from "./tile-pages";
 import { memoryColors,moveMemory,type MemoryColor } from "@/lib/memory-layout";
 import { saveMemoryLayout } from "@/app/admin/memory-layout-actions";
+import { AssistantNoteEditor } from "./assistant-note-editor";
+import type { ManagedAssistantNote } from "@/lib/assistant-notes-types";
 export type { LibraryFile } from "./attachment-picker";
 export type Folder={id:string;name:string};
 export type Friend={id:string;line_user_id:string;display_name:string;group_id:string;blocked:boolean};
@@ -22,11 +24,13 @@ export function Dialog({title,onClose,children,wide=false}:{title:string;onClose
   useLayoutEffect(()=>{const d=ref.current;d?.showModal();return()=>d?.close();},[]);
   return <dialog ref={ref} aria-labelledby={titleId} className={`pp-dialog${wide?" pp-dialog-wide":""}`} onCancel={onClose}><header className="row between"><h2 id={titleId}>{title}</h2><button type="button" className="secondary text-button" aria-label="ปิดหน้าต่าง" onClick={onClose}>ปิด</button></header>{children}</dialog>;
 }
-export function MemoryBoard({items,files,folders,query}:{items:Memory[];files:LibraryFile[];folders:Folder[];query:string}){
+export function MemoryBoard({items,notes=[],files,folders,query}:{items:Memory[];notes?:ManagedAssistantNote[];files:LibraryFile[];folders:Folder[];query:string}){
   const [selected,setSelected]=useState<string|null>(null);
   const [draft,setDraft]=useState<Memory[]|null>(null);
   const [notice,setNotice]=useState("");
   const [busy,startSaving]=useTransition();
+  const [refreshing,startRefresh]=useTransition();
+  const router=useRouter();
   const [dragged,setDragged]=useState<string|null>(null);
   const [dropTarget,setDropTarget]=useState<string|null>(null);
   const suppressDragClick=useRef(false);
@@ -35,6 +39,13 @@ export function MemoryBoard({items,files,folders,query}:{items:Memory[];files:Li
   const shown=draft??ordered;
   const editing=draft!==null;
   const memory=items.find(m=>m.id===selected);
+  const note=notes.find(n=>`line:${n.id}`===selected);
+  const searchTerm=query.trim().normalize("NFC").toLocaleLowerCase("th");
+  const matchingNotes=notes.filter(n=>`${n.title}\n${n.content}\n${n.sourceLabel}`.normalize("NFC").toLocaleLowerCase("th").includes(searchTerm));
+  const cards: ({kind:"manual";memory:Memory}|{kind:"line";note:ManagedAssistantNote})[]=[
+    ...shown.map(memory=>({kind:"manual" as const,memory})),
+    ...matchingNotes.map(note=>({kind:"line" as const,note})),
+  ];
   function saveDirectMove(id:string,target:number){
     if(busy)return;
     const next=moveMemory(shown,id,target);
@@ -85,14 +96,23 @@ export function MemoryBoard({items,files,folders,query}:{items:Memory[];files:Li
       <h2>รายการความจำ</h2>
       <Form className="search-bar memory-search" action="/admin" scroll={false}><label className="sr-only" htmlFor="memory-search">ค้นหาความจำ</label><input id="memory-search" key={query} name="q" type="search" disabled={editing||busy} defaultValue={query} placeholder="ค้นหาชื่อ คำถาม หรือคำตอบ…"/><button disabled={editing||busy} className="secondary">ค้นหา</button>{query && !editing && !busy && <Link href="/admin#memories">ล้าง</Link>}</Form>
       <div className="memory-heading-actions">
+        {!editing && <button type="button" className="secondary" disabled={busy||refreshing} onClick={()=>{setNotice("");startRefresh(()=>router.refresh());}}>{refreshing?"กำลังอัปเดต…":"อัปเดตความจำ"}</button>}
         {editing?<><button type="button" className="secondary" disabled={busy} onClick={()=>{setDraft(null);setNotice("");}}>ยกเลิก</button><button type="button" disabled={busy} onClick={save}>{busy?"กำลังบันทึก…":"บันทึกสีและลำดับ"}</button></>:<><button type="button" className="secondary" disabled={busy||!items.length} onClick={()=>{setDraft([...items]);setNotice("");}}>จัดเรียง/สี</button><button type="button" disabled={busy} onClick={()=>setSelected("new")}>เพิ่มความจำ</button></>}
       </div>
     </div>
-    <p className="muted">{items.length} รายการ{query?` · ค้นหา “${query}”`:""} · หน้าละ 20 รายการ{items.length===200?" · แสดงสูงสุด 200 รายการที่ตรงกับคำค้น":""}</p>
+    <p className="muted">{cards.length} รายการ{query?` · ค้นหา “${query}”`:""} · หน้าละ 20 รายการ{items.length===200?" · ความจำที่เพิ่มในโปรแกรมแสดงสูงสุด 200 รายการที่ตรงกับคำค้น":""}</p>
     {editing && <p className="memory-arrange-hint">ลากก้อนหรือกดปุ่มเลื่อนเพื่อจัดเรียง · เลือกสีด้านล่าง กดสีเดิมอีกครั้งเพื่อล้างสี</p>}
     {notice && <p role="status" className="memory-layout-status">{notice}</p>}
     <span className="sr-only" id={dragHelpId}>คลิกเพื่อแก้ไข หรือกดค้างแล้วลากเพื่อจัดเรียงและบันทึกอัตโนมัติ ใช้แป้น Alt พร้อมลูกศรซ้ายหรือขวาเพื่อเลื่อนตำแหน่งได้เช่นกัน</span>
-    <TilePages key={query} items={shown} label="รายการความจำ" renderItem={m=>{
+    <TilePages key={query} items={cards} label="รายการความจำ" renderItem={card=>{
+      if(card.kind==="line"){
+        const n=card.note;
+        return <button type="button" key={`line:${n.id}`} className="memory-tile memory-card assistant-note-card" disabled={editing||busy}
+          onClick={()=>setSelected(`line:${n.id}`)} title={`${n.title} · LINE · ${n.sourceLabel}`}>
+          <strong>{n.title}</strong><span className="memory-caption">LINE · {n.sourceLabel}</span>
+        </button>;
+      }
+      const m=card.memory;
       const index=shown.findIndex(item=>item.id===m.id);
       const tileClass=`memory-tile memory-card${editing?" arranging":""}`;
       const caption=<span className="memory-caption">{[m.answer_variants?.length ? `${m.answer_variants.length + 1} คำตอบ` : "", m.attachment_ids?.length ? "มีไฟล์แนบ" : ""].filter(Boolean).join(" · ")}</span>;
@@ -121,8 +141,9 @@ export function MemoryBoard({items,files,folders,query}:{items:Memory[];files:Li
         <div className="memory-colors" role="group" aria-label={`สีก้อน ${m.title}`}>{memoryColors.map(c=><button type="button" key={c.value} data-color={c.value} title={c.label} aria-label={c.label} aria-pressed={m.card_color===c.value} disabled={busy} onClick={()=>color(m.id,c.value)}/>)}</div>
       </article>;
     }}/>
-    {!items.length && <div className="empty"><h3>{query?"ไม่พบความจำที่ค้นหา":"เริ่มเก็บเรื่องที่อยากให้ PP จำ"}</h3><p>{query?"ลองใช้คำสั้นลง หรือค้นด้วยคำถามที่บันทึกไว้":"เพิ่มความจำใหม่ได้จากปุ่มด้านบน"}</p></div>}
+    {!cards.length && <div className="empty"><h3>{query?"ไม่พบความจำที่ค้นหา":"เริ่มเก็บเรื่องที่อยากให้ PP จำ"}</h3><p>{query?"ลองใช้คำสั้นลง หรือค้นด้วยคำถามที่บันทึกไว้":"เพิ่มความจำจากปุ่มด้านบน หรือสั่งจำใน LINE แล้วยืนยัน จากนั้นกดอัปเดตความจำ"}</p></div>}
     {selected && (selected==="new" || memory) && <Dialog wide title={memory?"แก้ไขความจำ":"เพิ่มความจำ"} onClose={()=>setSelected(null)}><MemoryForm key={memory?.id||"new"} memory={memory} files={files} folders={folders}/>{memory && <DeleteMemory id={memory.id}/>}</Dialog>}
+    {note && <Dialog wide title="แก้ไขความจำ" onClose={()=>setSelected(null)}><AssistantNoteEditor key={note.id} note={note} onComplete={message=>{setSelected(null);setNotice(message);}}/></Dialog>}
   </section>;
 }
 function FolderEditor({folder}:{folder?:Folder}){

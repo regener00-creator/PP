@@ -9,7 +9,7 @@ import { groupId } from "@/lib/line";
 type State = { ok: boolean; message: string };
 const target = z.object({ id: z.uuid(), group: groupId.nullable(), updated_at: z.iso.datetime({ offset: true }) });
 const fields = target.extend({ title: z.string().trim().min(1).max(120), content: z.string().trim().min(1).max(2000) });
-const changed = { ok: false, message: "ความจำนี้เปลี่ยนไปหรือถูกลบแล้ว กรุณาปิดหน้าต่างแล้วกดอัปเดตจาก LINE ก่อนแก้ไขอีกครั้ง" };
+const changed = { ok: false, message: "ความจำนี้เปลี่ยนไปหรือถูกลบแล้ว กรุณาปิดหน้าต่างแล้วกดอัปเดตความจำก่อนแก้ไขอีกครั้ง" };
 function values(form: FormData) {
   return { id: form.get("id"), group: form.get("group") || null, updated_at: form.get("updated_at"), title: form.get("title"), content: form.get("content") };
 }
