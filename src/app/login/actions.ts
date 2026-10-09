@@ -23,7 +23,7 @@ export async function login(_: { message: string }, form: FormData) {
     return { message: "อีเมล รหัสผ่าน หรือสิทธิ์เข้าใช้งานไม่ถูกต้อง" };
   }
   const next=String(form.get("next")||"");
-  redirect(/^\/api\/files\/[0-9a-f-]{36}$/.test(next)?next:"/workspace");
+  redirect(/^\/api\/files\/[0-9a-f-]{36}$/.test(next)?next:"/admin");
 }
 export async function logout() {
   await (await authClient()).auth.signOut(); redirect("/login");

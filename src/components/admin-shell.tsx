@@ -7,7 +7,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="admin-shell">
       <aside className="sidebar">
-        <Link className="brand" href="/admin/chat">
+        <Link className="brand" href="/admin">
           <span className="mark">
             pp<span>•</span>
           </span>

@@ -1,7 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import Link from "next/link";
-import { saveCalendarAppointment, deleteCalendarAppointment } from "@/app/admin/chat/calendar-actions";
+import { saveCalendarAppointment, deleteCalendarAppointment } from "@/app/admin/assistant-calendar-actions";
 import type { CalendarEntry } from "@/lib/calendar";
 
 const initial = { ok: false, message: "" };
@@ -28,7 +27,6 @@ export function AssistantEventEditor({ event, recipient }: { event: CalendarEntr
       <p role="status">{state.message}</p>
     </form>
     <div className="row between">
-      <Link className="button secondary" href={record.group ? `/admin/chat?group=${record.group}` : "/admin/chat"}>คุยกับเลขา</Link>
       <form action={remove} onSubmit={e => { if (!confirm("ลบนัดหมายนี้และหยุดแจ้งเตือนครั้งถัดไป?")) e.preventDefault(); }}>
         <input type="hidden" name="id" value={record.id}/>
         <input type="hidden" name="group" value={record.group || ""}/>

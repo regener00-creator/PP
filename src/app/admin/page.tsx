@@ -46,7 +46,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const libraryFiles = (files.data || []) as LibraryFile[];
 
   return <>
-    <header className="dashboard-heading"><h1>ความทรงจำ</h1><a className="button secondary" href="/admin/chat">คุยกับเลขา</a></header>
+    <header className="dashboard-heading"><h1>ความทรงจำ</h1></header>
     <div className="stats memory-stats">
       <article><span>ความจำทั้งหมดที่แสดง</span><strong>{items.length}</strong></article>
       <article><span>กลุ่มที่เปิดใช้งาน</span><strong>{groups.filter(g => g.enabled).length}</strong></article>

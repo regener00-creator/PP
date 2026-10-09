@@ -1,2 +1,2 @@
 import { redirect } from "next/navigation";
-export default function Retired() { redirect("/admin/chat"); }
+export default function Retired() { redirect("/admin"); }

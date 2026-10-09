@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const pages = [
-  { href: "/admin/chat", label: "คุยกับเลขา" },
   { href: "/admin", label: "ความทรงจำ" },
   { href: "/admin/files", label: "รูปและไฟล์" },
   { href: "/admin/settings", label: "สิทธิ์/เพื่อน/ประวัติ" },

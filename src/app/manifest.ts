@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "น้องโจอา",
     description: "ความทรงจำ ปฏิทิน และผู้ช่วยใน LINE ของคุณ",
     lang: "th",
-    start_url: "/admin/chat",
+    start_url: "/admin",
     scope: "/",
     display: "standalone",
     background_color: "#f7f5f3",

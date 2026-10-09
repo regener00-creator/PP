@@ -455,3 +455,10 @@ Production deployment dpl_6hgBxqbYkVaeiCR77Z3vcAzArz5t is READY and aliased to h
 - Browser: real CalendarBoard/editor with temporary local synthetic fixtures verified correct dates, search and personal/group recipients, no console errors. Fixture removed before build/deploy. Production admin browser currently requires login; no auth bypass and no live LINE messages or production test records created.
 - Production read-only baseline: 21 memories, 6 legacy calendar events, 1 secretary event (owner DM), 2 enabled groups. Preserve all of these records.
 - Released source commit `68c5273` to Vercel Production: `dpl_2sc56om1ExXypcgmRjvHTNHXARN2`, READY, alias https://pp-theta-beryl.vercel.app. Manual CLI deploy; GitHub main updated separately. `/api/health` 200; unauthenticated `/admin` 307 to `/login`; temporary `/preview-assistant-calendar` 404. No production authenticated interaction or live LINE test was performed.
+
+## Retire web secretary chat — 9 October 2026
+
+- User chose LINE for all secretary conversations. Removed web-chat menu, header/editor links, chat component and dedicated styles. App root, sign-in default, sidebar logo, PWA start URL, workspace and retired planner links now lead to `/admin` (Memory/calendar). Existing `/admin/chat` bookmarks authenticate and redirect there.
+- Old web chat actions are authenticated and inert: no AI calls, confirmations, cancellation or record deletion. All secretary data remains stored, and LINE assistant/bot/reminder code is unchanged.
+- Calendar appointment management moved to `src/app/admin/assistant-calendar-actions.ts`. Its owner/group authorization helper is now server-only `src/lib/assistant-admin.ts`, independent of retired chat actions. Existing calendar integration and reminder behavior preserved.
+- `npm run check`: 454 tests / 35 files passed and production build succeeded. Updated stale-action and entrypoint coverage plus existing LINE/assistant/calendar suites. No database migration or production data changes; no live LINE messages sent.
