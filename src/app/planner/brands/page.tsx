@@ -1,5 +1,2 @@
-import { plannerCatalog } from "@/lib/planner-data";
-import { BrandWorkspace } from "@/components/planner/brands";
-export default async function Brands() {
-  return <BrandWorkspace {...await plannerCatalog()} />;
-}
+import { redirect } from "next/navigation";
+export default function Retired() { redirect("/admin/chat"); }

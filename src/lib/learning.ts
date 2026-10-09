@@ -1,6 +1,6 @@
 import "server-only";
 // Compatibility exports are deliberately inert, even with AI_ENABLED=true.
-// Gemini for manually authored memories and Content Planner remains independent.
+// Gemini for manually authored memories and personal secretary remains independent.
 export async function captureLearningEvent(
   _input: unknown,
   _destination: string,

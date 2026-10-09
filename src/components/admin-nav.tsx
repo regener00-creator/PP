@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const pages = [
+  { href: "/admin/chat", label: "คุยกับเลขา" },
   { href: "/admin", label: "ความทรงจำ" },
   { href: "/admin/files", label: "รูปและไฟล์" },
   { href: "/admin/settings", label: "สิทธิ์/เพื่อน/ประวัติ" },
@@ -48,18 +49,11 @@ function NavLink({
   );
 }
 
-const plannerPages = [
-  { href: "/planner", label: "ช่วยคิดคอนเทนต์" },
-  { href: "/planner/work", label: "งานและปฏิทิน" },
-  { href: "/planner/brands", label: "ข้อมูลแบรนด์" },
-  { href: "/planner/files", label: "รูปและไฟล์" },
-  { href: "/planner/overview", label: "ภาพรวมและผลลัพธ์" },
-];
-export function AdminNav({ area = "memory" }: { area?: "memory" | "planner" }) {
+export function AdminNav() {
   const pathname = usePathname();
   return (
     <nav aria-label="เมนูหลัก">
-      {(area === "planner" ? plannerPages : pages).map((page) => (
+      {pages.map((page) => (
         <NavLink key={page.href} {...page} active={pathname === page.href} />
       ))}
     </nav>

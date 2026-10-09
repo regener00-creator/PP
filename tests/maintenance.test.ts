@@ -16,7 +16,9 @@ it("only runs retention cleanup, never group learning", async () => {
     }),
   );
   expect(result.status).toBe(200);
-  expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("pp_cleanup");
+  expect(mocks.rpc).toHaveBeenCalledWith("pp_cleanup");
+  expect(mocks.rpc).toHaveBeenCalledWith("pp_cleanup_assistant");
+  expect(mocks.rpc).toHaveBeenCalledTimes(2);
   expect(mocks.run).not.toHaveBeenCalled();
 });
 it("rejects unauthorized scheduled requests before touching data", async () => {

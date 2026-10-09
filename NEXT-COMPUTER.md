@@ -55,6 +55,12 @@ npx --yes vercel@60.1.3 deploy --prod --yes --project pp --scope regener00-creat
 
 ฐานข้อมูล ความจำ คอนเทนต์ ปฏิทิน และไฟล์แนบอยู่ใน Supabase เดิม ไม่รวมใน GitHub และไม่ต้องย้ายเมื่อเปลี่ยนคอม โปรเจกต์ NOOSOL WEBSITE ใช้ร่วมกับแอปอื่น: PP ใช้ schema pp เท่านั้น
 
+## งาน Cloud ล่าสุด · 9 ตุลาคม 2026
+
+โค้ดรุ่นเลขาส่วนตัวแก้แล้ว ผ่าน `npm run check` (434 tests, TypeScript, production build) แต่ **ยังไม่ได้นำขึ้น Production** เพราะการเขียน migration ใหม่ถูกปฏิเสธ อ่านส่วน Personal secretary on Cloud ท้าย HANDOFF.md ก่อนทำต่อ
+
+Migration ใหม่ `20261009065258_personal_secretary.sql` ยังไม่ได้ apply; ห้ามรัน migrations เก่าซ้ำ ให้ตรวจสถานะจริงและขอการอนุมัติใหม่สำหรับงานที่ถูกปฏิเสธก่อนเพิ่มตารางและ deploy โปรเจกต์เดิม เว็บปัจจุบันยังเป็นรุ่นก่อน
+
 ## สถานะที่นำขึ้น GitHub
 
 - รวม Content Planner, Memory, LINE bot และการแก้ไขถึง 3 ตุลาคม 2026

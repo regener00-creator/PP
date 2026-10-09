@@ -8,7 +8,7 @@ import { MAX_ATTACHMENTS } from "@/lib/attachment-limits";
 import { groupId,userId } from "@/lib/line";
 import type { ActionState } from "./actions";
 function value(f:FormData,k:string){return String(f.get(k)||"");}
-function success(message:string){revalidatePath("/admin","layout");revalidatePath("/planner","layout");return {ok:true,message};}
+function success(message:string){revalidatePath("/admin","layout");return {ok:true,message};}
 export async function saveFolder(_:ActionState,form:FormData):Promise<ActionState>{
   await requireAdmin();const name=z.string().trim().min(1).max(80).safeParse(value(form,"name"));
   if(!name.success)return {ok:false,message:"กรุณาใส่ชื่อโฟลเดอร์ไม่เกิน 80 ตัวอักษร"};

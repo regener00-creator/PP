@@ -1,8 +1,29 @@
 import Link from "next/link";
-import type {ReactNode} from "react";
+import type { ReactNode } from "react";
 import { AdminNav } from "./admin-nav";
 import { InstallAppButton } from "./install-app";
-import {logout} from "@/app/login/actions";
-export function AdminShell({children,area="memory"}:{children:ReactNode;area?:"memory"|"planner"}){
-  return <div className={`admin-shell ${area === "planner" ? "planner-shell" : ""}`}><aside className="sidebar"><Link className="brand" href="/workspace"><span className="mark">pp<span>•</span></span><span>PP <small>{area === "planner" ? "CONTENT PLANNER" : "MEMORY"}</small></span></Link><AdminNav area={area}/><div className="sidebar-bottom"><Link className="button secondary" href="/workspace">สลับพื้นที่</Link><InstallAppButton className="secondary"/><form action={logout}><button className="secondary">ออกจากระบบ</button></form></div></aside><main className="dashboard">{children}</main></div>;
+import { logout } from "@/app/login/actions";
+export function AdminShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="admin-shell">
+      <aside className="sidebar">
+        <Link className="brand" href="/admin/chat">
+          <span className="mark">
+            pp<span>•</span>
+          </span>
+          <span>
+            น้องโจอา<small>เลขาส่วนตัว</small>
+          </span>
+        </Link>
+        <AdminNav />
+        <div className="sidebar-bottom">
+          <InstallAppButton className="secondary" />
+          <form action={logout}>
+            <button className="secondary">ออกจากระบบ</button>
+          </form>
+        </div>
+      </aside>
+      <main className="dashboard">{children}</main>
+    </div>
+  );
 }

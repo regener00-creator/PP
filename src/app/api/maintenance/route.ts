@@ -13,5 +13,11 @@ export async function GET(request: Request) {
   )
     return new Response("Unauthorized", { status: 401 });
   const { error } = await database().rpc("pp_cleanup");
-  return Response.json({ ok: !error }, { status: error ? 503 : 200 });
+  const assistant = error
+    ? { error }
+    : await database().rpc("pp_cleanup_assistant");
+  return Response.json(
+    { ok: !error && !assistant.error },
+    { status: error || assistant.error ? 503 : 200 },
+  );
 }

@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { InstallAppProvider } from "@/components/install-app";
 import "./globals.css";
-import "./planner.css";
 export const metadata: Metadata = {
-  title: "PP · Content Planner & Memory",
+  title: "น้องโจอา · เลขาส่วนตัว",
   applicationName: "น้องโจอา",
-  description: "บอทตัวแทนของคุณ ความจำที่คุณเลือกแบ่งปัน",
+  description: "เลขาส่วนตัวสำหรับคุณ ครอบครัว และเพื่อน จำ ถาม เตือน นัดหมาย และคุยทั่วไป",
   robots: { index: false, follow: false },
   icons: { icon: "/icons/app-192.png", apple: "/icons/app-180.png" },
   appleWebApp: { capable: true, title: "น้องโจอา", statusBarStyle: "default" },
