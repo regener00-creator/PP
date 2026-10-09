@@ -215,6 +215,21 @@ describe("additive secretary migration and real PostgreSQL boundaries", () => {
       (await confirm(await proposal(other, other), other, other)).decision,
     ).toBe("saved");
   });
+  it("confirmed appointments are available to the owner calendar once, with scope-bound edits and deletion", async () => {
+    const id = await proposal(owner, owner, "event");
+    expect((await db.query("select id from pp.assistant_events where scope_key=$1", [owner])).rows).toHaveLength(0);
+    expect((await confirm(id, owner, owner)).decision).toBe("saved");
+    expect((await confirm(id, owner, owner)).decision).toBe("saved");
+    const records = await db.query<{id:string;title:string;content:string}>("select id,title,content from pp.assistant_events where scope_key=$1", [owner]);
+    expect(records.rows).toHaveLength(1);
+    expect(records.rows[0]).toMatchObject({title:"พบเพื่อน",content:"เวลา 14:00"});
+    const recordId = records.rows[0].id;
+    expect((await db.query("update pp.assistant_events set title='changed' where id=$1 and scope_key=$2 returning id", [recordId,friend])).rows).toHaveLength(0);
+    await db.query("update pp.assistant_events set title='เลื่อนนัด',event_date='2026-10-15' where id=$1 and scope_key=$2", [recordId,owner]);
+    expect((await db.query<{title:string}>("select title from pp.assistant_events where scope_key=$1", [owner])).rows[0].title).toBe("เลื่อนนัด");
+    await db.query("delete from pp.assistant_events where id=$1 and scope_key=$2", [recordId,owner]);
+    expect((await db.query("select id from pp.assistant_events where scope_key=$1", [owner])).rows).toHaveLength(0);
+  });
   it("persists reminder payload/retry key and never reclaims sent deliveries", async () => {
     const id = await proposal(friend, friend, "event");
     expect((await confirm(id)).decision).toBe("saved");

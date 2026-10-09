@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MemoryForm,DeleteMemory,type Memory,type Permission } from "./admin-forms";
 import { saveFolder,deleteFolder,saveFile,deleteFile,saveCalendarEvent,deleteCalendarEvent } from "@/app/admin/workspace-actions";
-import { occursOn,type CalendarEvent } from "@/lib/calendar";
+import { occursOn,type CalendarEvent,type CalendarEntry } from "@/lib/calendar";
+import { AssistantEventEditor } from "./assistant-event-editor";
 import { AttachmentPicker, type LibraryFile } from "./attachment-picker";
 import { FriendMentionSelect } from "./friend-mention-select";
 import type { MentionOwner } from "@/lib/friends";
@@ -167,7 +168,9 @@ function EventEditor({event,date,groups,friends,files,folders,owner}:{event?:Cal
     {event && <form action={remove} onSubmit={e=>{if(!confirm("ลบรายการนี้และหยุดแจ้งเตือนครั้งถัดไป?"))e.preventDefault();}}><input name="id" type="hidden" value={event.id}/><button className="danger secondary" disabled={deleting}>ลบรายการ</button><p role="status">{deleted.message}</p></form>}
   </div>;
 }
-export function CalendarBoard({events,today,groups,friends,files,folders,owner,children}:{events:CalendarEvent[];today:string;groups:Permission[];friends:Friend[];files:LibraryFile[];folders:Folder[];owner:MentionOwner;children?:ReactNode}) {
+export function CalendarBoard({events,today,groups,friends,files,folders,owner,children}:{events:CalendarEntry[];today:string;groups:Permission[];friends:Friend[];files:LibraryFile[];folders:Folder[];owner:MentionOwner;children?:ReactNode}) {
+  const router=useRouter();
+  const [refreshing,refresh]=useTransition();
   const [month,setMonth]=useState(today.slice(0,7));
   const [selected,setSelected]=useState<{id:string;date:string}|null>(null);
   const [q,setQ]=useState("");
@@ -184,7 +187,7 @@ export function CalendarBoard({events,today,groups,friends,files,folders,owner,c
   const event=events.find(e=>e.id===selected?.id);
   return <div className="stack calendar-workspace">
     <div className="calendar-actions">
-      <p className="calendar-guidance">เก็บได้สูงสุด 100 รายการ · บันทึกแล้วเปิดแจ้งเตือนอัตโนมัติ · ส่งช่วง 08:00–09:00 น. เวลาไทย · โควตาคิดตามจำนวนผู้รับ</p>
+      <p className="calendar-guidance">รวมนัดหมายที่ยืนยันกับเลขาแล้ว · แจ้งเตือนช่วง 08:00–09:00 น. เวลาไทย</p>
     </div>
     <div className="calendar-toolbar">
       <div className="calendar-month-nav">
@@ -193,6 +196,7 @@ export function CalendarBoard({events,today,groups,friends,files,folders,owner,c
         <button className="secondary" aria-label="เดือนถัดไป" onClick={()=>move(1)}>ถัดไป</button>
       </div>
       <button className="secondary" onClick={()=>setMonth(today.slice(0,7))}>เดือนนี้</button>
+      <button className="secondary" disabled={refreshing} onClick={()=>refresh(()=>router.refresh())}>{refreshing?"กำลังอัปเดต…":"อัปเดตปฏิทิน"}</button>
       <input className="calendar-search" type="search" aria-label="ค้นหารายการ" value={q} onChange={e=>setQ(e.target.value)} placeholder="ชื่อหรือข้อความ…"/>
     </div>
     <div className="calendar-grid" id="calendar" aria-label="ปฏิทิน">
@@ -217,11 +221,11 @@ export function CalendarBoard({events,today,groups,friends,files,folders,owner,c
       <p className="muted">{matching.length} รายการ{q?` · ค้นหา “${q}”`:""} · หน้าละ 20 รายการ</p>
       <TilePages key={q} items={matching} label="รายการทั้งหมด" renderItem={e=>
         <button type="button" key={e.id} className={`memory-tile calendar-item-tile ${e.enabled?"enabled":""}`} title={e.title} onClick={()=>setSelected({id:e.id,date:e.event_date})}>
-          <strong>{e.title}</strong><span className="calendar-item-details"><time dateTime={e.event_date}>{e.event_date}</time>{e.annual && <span>ทำซ้ำทุกปี</span>}<span>{e.enabled?"เปิดแจ้งเตือน":"ยังไม่แจ้งเตือน"}</span></span>
+          <strong>{e.title}</strong><span className="calendar-item-details"><time dateTime={e.event_date}>{e.event_date}</time>{e.assistant && <span>นัดหมายจากเลขา</span>}{e.annual && <span>ทำซ้ำทุกปี</span>}<span>{e.enabled?"เปิดแจ้งเตือน":"ยังไม่แจ้งเตือน"}</span></span>
         </button>
       }/>
       {!matching.length && <p>ยังไม่มีรายการ</p>}
     </section>
-    {selected && (selected.id==="new" || event) && <Dialog wide title={event?"แก้ไขรายการ":"เพิ่มรายการในปฏิทิน"} onClose={()=>setSelected(null)}><EventEditor key={selected.id} event={event} date={selected.date} groups={groups} friends={friends} files={files} folders={folders} owner={owner}/></Dialog>}
+    {selected && (selected.id==="new" || event) && <Dialog wide title={event?"แก้ไขรายการ":"เพิ่มรายการในปฏิทิน"} onClose={()=>setSelected(null)}>{event?.assistant ? <AssistantEventEditor key={selected.id} event={event} recipient={event.group_id ? groups.find(g=>g.group_id===event.group_id)?.label || "กลุ่ม LINE" : "แชตส่วนตัวของฉัน"}/> : <EventEditor key={selected.id} event={event} date={selected.date} groups={groups} friends={friends} files={files} folders={folders} owner={owner}/>}</Dialog>}
   </div>;
 }

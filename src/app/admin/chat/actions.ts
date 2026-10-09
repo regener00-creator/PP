@@ -59,6 +59,7 @@ export async function chatWithAssistant(
       parsed.data.requestId,
     );
     revalidatePath("/admin/chat");
+    if (reply.saved) revalidatePath("/admin");
     return reply;
   } catch {
     return { text: "เลขายังตอบไม่ได้ชั่วคราวครับ กรุณาลองอีกครั้ง" };
@@ -72,6 +73,7 @@ export async function confirmChat(
   z.uuid().parse(id);
   const reply = await confirmAssistant(await webScope(group), id);
   revalidatePath("/admin/chat");
+  if (reply.saved) revalidatePath("/admin");
   return reply;
 }
 export async function cancelChat(id: string, group: string | null) {
@@ -93,4 +95,5 @@ export async function deleteAssistantRecord(form: FormData) {
     .eq("scope_key", scope.group || scope.sender);
   dbError(r.error);
   revalidatePath("/admin/chat");
+  if (kind === "event") revalidatePath("/admin");
 }

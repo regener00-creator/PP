@@ -5,7 +5,8 @@ import { LineQuota, QuotaLoading } from "@/components/line-quota";
 import { SemanticStatus } from "@/components/semantic-status";
 import { requireAdmin } from "@/lib/auth";
 import { database, dbError } from "@/lib/db";
-import { thaiDate, type CalendarEvent } from "@/lib/calendar";
+import { thaiDate, type CalendarEntry, type CalendarDelivery } from "@/lib/calendar";
+import { assistantCalendar } from "@/lib/assistant-calendar";
 import { MemoryReview } from "@/components/memory-review";
 import { memoryCatalog } from "@/lib/memory-assistant";
 import type { LibraryFolder } from "@/components/attachment-picker";
@@ -24,7 +25,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const query = typeof params.q === "string" ? params.q.slice(0, 120) : "";
   await requireAdmin();
   const db = database();
-  const [memories, permissions, files, events, friends, deliveries, folders, owner] = await Promise.all([
+  const [memories, permissions, files, events, friends, deliveries, folders, owner, appointments] = await Promise.all([
     db.rpc("pp_search_memories", { p_query: query }),
     db.from("permissions").select("group_id,label,enabled,allow_owner_mention").order("created_at", { ascending: false }),
     db.from("files").select("id,name,folder_id,mime,bytes,visibility").order("created_at", { ascending: false }).limit(500),
@@ -33,11 +34,15 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     db.from("reminder_deliveries").select("id,event_id,occurs_on,lead_days,target,status,reason,created_at").order("created_at", { ascending: false }).limit(30),
     db.from("folders").select("id,name").order("name"),
     db.from("owner").select("display_name,line_user_id").eq("id", 1).single(),
+    assistantCalendar(),
   ]);
   for (const result of [memories, permissions, files, events, friends, deliveries, folders, owner]) dbError(result.error);
   const items = (memories.data || []) as Memory[];
   const groups = (permissions.data || []) as Permission[];
-  const calendarEvents = (events.data || []) as CalendarEvent[];
+  const calendarEvents: CalendarEntry[] = [...(events.data || []), ...appointments.events]
+    .sort((a, b) => a.event_date.localeCompare(b.event_date) || a.id.localeCompare(b.id));
+  const recentDeliveries = [...((deliveries.data || []) as CalendarDelivery[]), ...appointments.deliveries]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 30);
   const libraryFiles = (files.data || []) as LibraryFile[];
 
   return <>
@@ -54,14 +59,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <h2>การแจ้งเตือนล่าสุด</h2>
       <div className="table-wrap"><table>
         <thead><tr><th>รายการ</th><th>วันที่</th><th>ผู้รับ</th><th>สถานะ</th></tr></thead>
-        <tbody>{deliveries.data?.map(d => <tr key={d.id}>
+        <tbody>{recentDeliveries.map(d => <tr key={d.id}>
           <td>{calendarEvents.find(e => e.id === d.event_id)?.title || "รายการที่ลบแล้ว"}</td>
           <td>{d.occurs_on}{d.lead_days ? " (ก่อน 1 วัน)" : ""}</td>
           <td>{d.target.startsWith("U") ? "แชตส่วนตัวเจ้าของ" : groups.find(g => g.group_id === d.target)?.label || "กลุ่ม"}</td>
-          <td>{reasons[d.reason] || d.status}</td>
+          <td>{reasons[d.reason || ""] || d.status}</td>
         </tr>)}</tbody>
       </table></div>
-      {!deliveries.data?.length && <p>ยังไม่มีการส่งแจ้งเตือน</p>}
+      {!recentDeliveries.length && <p>ยังไม่มีการส่งแจ้งเตือน</p>}
     </section>
     <details className="panel semantic-details">
       <summary>การจับความหมายด้วย Gemini และโควตา AI</summary>

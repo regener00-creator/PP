@@ -113,7 +113,7 @@ export default async function Chat({
             ))}
           </section>
           <Link className="button secondary" href="/admin#calendar">
-            จัดการความทรงจำและปฏิทินเดิม
+            เปิดปฏิทินในความทรงจำ
           </Link>
         </aside>
       </div>

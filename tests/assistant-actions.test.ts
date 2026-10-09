@@ -30,6 +30,7 @@ import {
   deleteAssistantRecord,
 } from "../src/app/admin/chat/actions";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+import { revalidatePath } from "next/cache";
 const sender = `U${"a".repeat(32)}`,
   group = `C${"b".repeat(32)}`;
 beforeEach(() => {
@@ -111,4 +112,12 @@ it("invalid and rate-limited requests never reach generation", async () => {
     group: null,
   });
   expect(mocks.reply).not.toHaveBeenCalled();
+});
+it("refreshes Memory after button confirmation and a saved text reply", async () => {
+  await confirmChat(crypto.randomUUID(), null);
+  expect(revalidatePath).toHaveBeenCalledWith("/admin");
+  vi.mocked(revalidatePath).mockClear();
+  mocks.reply.mockResolvedValue({ text: "saved", saved: true });
+  await chatWithAssistant({ question: "ยืนยัน", requestId: crypto.randomUUID(), group: null });
+  expect(revalidatePath).toHaveBeenCalledWith("/admin");
 });
