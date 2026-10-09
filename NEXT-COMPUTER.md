@@ -57,9 +57,11 @@ npx --yes vercel@60.1.3 deploy --prod --yes --project pp --scope regener00-creat
 
 ## งาน Cloud ล่าสุด · 9 ตุลาคม 2026
 
-โค้ดรุ่นเลขาส่วนตัว **ขึ้น Production แล้ว** ที่เว็บเดิม ผ่าน `npm run check` (434 tests / 32 files, TypeScript, production build) รุ่นโค้ด `f3ba166e07267587a95886b5a6ccab56b6ff2152`, deployment `dpl_B2MfoXXD35PxLdsioN8tqWVoKomu` สถานะ READY อ่านส่วน Personal secretary deployed ท้าย HANDOFF.md ก่อนทำต่อ
+โค้ดรุ่นเลขาส่วนตัว **ขึ้น Production แล้ว** ที่เว็บเดิม ผ่าน `npm run check` (443 tests / 33 files, TypeScript, production build) รุ่นโค้ด `82b8d0d89f7e57855b361ca65ec8c6be86be80c7`, deployment `dpl_75d2EEWKzqSudn7VKJAWV8JvkCH6` สถานะ READY อ่านรายการล่าสุดท้าย HANDOFF.md ก่อนทำต่อ
 
 Migration ใหม่ `20261009065258_personal_secretary.sql` apply และบันทึก history แล้วครั้งเดียว หลังผู้ใช้อนุมัติใหม่ ใช้ Supabase และ Vercel โปรเจกต์เดิม ห้ามรัน migration นี้หรือ migrations เก่าซ้ำ หน้าเริ่มต้น `/admin/chat`; Content Planner ปิดแล้วและข้อมูลเก่ายังคงอยู่ ความทรงจำเดิม 21 รายการและปฏิทินเดิม 9 รายการตรวจ fingerprint แล้วตรงก่อนเปลี่ยน ระบบเตือนผ่าน LINE ใช้ช่วง 08:00–09:00 เวลาไทยตาม cron เดิม ไม่มีการทดสอบส่ง LINE หรือเรียก Gemini จริงในงานนี้
+
+ต่อมาผู้ใช้สั่งลบเฉพาะกลุ่ม “ทดสอบบอท” ตรวจ LINE แล้วบอตไม่อยู่ในกลุ่ม และลบข้อมูลกลุ่มสำเร็จ รวมเพื่อน 1 ราย ประวัติ 3 รายการ นัดหมาย 3 รายการ และบันทึกการเตือน 1 รายการ ความทรงจำเดิม 21 รายการยังตรงทุกแถว อีกสองกลุ่มและนัดหมายที่เหลือ 6 รายการไม่เปลี่ยน ห้ามคืนข้อมูลกลุ่มนี้หรือรันคำสั่งออกจากกลุ่มซ้ำโดยอัตโนมัติ `scripts/leave-test-group.mjs` ต้องเรียกเองอย่างชัดเจนเท่านั้น ไม่ได้เป็นส่วนของ npm build หรือ public route
 
 ## สถานะที่นำขึ้น GitHub
 
