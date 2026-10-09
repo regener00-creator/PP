@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icons/app-192.png", apple: "/icons/app-180.png" },
   appleWebApp: { capable: true, title: "น้องโจอา", statusBarStyle: "default" },
 };
-export const viewport: Viewport = { themeColor: "#4f4038" };
+export const viewport: Viewport = { themeColor: "#10171D", colorScheme: "dark" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="th"><body><InstallAppProvider>{children}</InstallAppProvider></body></html>;
 }

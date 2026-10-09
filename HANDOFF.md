@@ -479,3 +479,10 @@ Production deployment dpl_6hgBxqbYkVaeiCR77Z3vcAzArz5t is READY and aliased to h
 - Extracted `AssistantNoteEditor` from the removed standalone board; prefixed LINE selection/card IDs prevent collisions with manual UUIDs. Main search matches LINE title/content/source alongside the original server search for manual memories. Refresh is now อัปเดตความจำ. Existing manual color/order controls remain, with LINE cards disabled while arranging manual entries; no migration or data copying.
 - Source e77acf4. npm run check passed 468 tests / 37 files plus typecheck and build.
 - Production READY dpl_3sLvQhTBTy48Y7nadA2nr7kFJBTF / https://pp-7un3ukcwi-regener00-creators-projects.vercel.app, alias unchanged. Authenticated browser verified 5 combined cards (4 manual + 1 LINE), no top counters or separate LINE section, original LINE editor opens, shared search finds the LINE-only email card with no empty-manual false state. Cleared search afterward; no production data changed. No error/fatal runtime logs during this check.
+
+
+## Dark theme and 30-card memory pages · 9 October 2026
+
+- Applied owner-specified dark slate palette throughout app, forms, dialogs, calendar, library, settings, login/install and PWA viewport/manifest. Green accent uses dark text; existing four card colours use readable dark variants. Responsive grid stays 10/5/3 columns.
+- Memory pagination now 30 cards (10 × 3 desktop); calendar list retains 20. Removed top list-count captions, calendar schedule intro, Gemini/quota disclosure and visible example-question field. Hidden aliases preserve existing examples on edit/merge/choosing an existing card; AI behavior and storage unchanged.
+- Validation: typecheck, 468 tests / 37 files and production build passed. Temporary development fixture (35 synthetic memories, removed before build) verified 30 cards in 10 columns/3 rows, 5 on second page, dark memory/calendar dialogs and no overflow at 390px. No database writes, migrations, LINE sends or live AI calls.

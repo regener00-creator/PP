@@ -2,21 +2,20 @@
 
 import { useId, useState, type ReactNode } from "react";
 
-const PAGE_SIZE = 20;
-
-export function TilePages<T>({ items, label, renderItem }: {
+export function TilePages<T>({ items, label, renderItem, pageSize = 20 }: {
   items: T[];
   label: string;
+  pageSize?: number;
   renderItem: (item: T) => ReactNode;
 }) {
   const gridId = useId();
   const [page, setPage] = useState(1);
-  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   // A deletion can remove the last page. Keep the next render on a valid page.
   if (page !== currentPage) setPage(currentPage);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const end = Math.min(start + PAGE_SIZE, items.length);
+  const start = (currentPage - 1) * pageSize;
+  const end = Math.min(start + pageSize, items.length);
 
   if (!items.length) return null;
   return <>

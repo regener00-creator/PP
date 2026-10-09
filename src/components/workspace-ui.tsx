@@ -100,11 +100,10 @@ export function MemoryBoard({items,notes=[],files,folders,query}:{items:Memory[]
         {editing?<><button type="button" className="secondary" disabled={busy} onClick={()=>{setDraft(null);setNotice("");}}>ยกเลิก</button><button type="button" disabled={busy} onClick={save}>{busy?"กำลังบันทึก…":"บันทึกสีและลำดับ"}</button></>:<><button type="button" className="secondary" disabled={busy||!items.length} onClick={()=>{setDraft([...items]);setNotice("");}}>จัดเรียง/สี</button><button type="button" disabled={busy} onClick={()=>setSelected("new")}>เพิ่มความจำ</button></>}
       </div>
     </div>
-    <p className="muted">{cards.length} รายการ{query?` · ค้นหา “${query}”`:""} · หน้าละ 20 รายการ{items.length===200?" · ความจำที่เพิ่มในโปรแกรมแสดงสูงสุด 200 รายการที่ตรงกับคำค้น":""}</p>
     {editing && <p className="memory-arrange-hint">ลากก้อนหรือกดปุ่มเลื่อนเพื่อจัดเรียง · เลือกสีด้านล่าง กดสีเดิมอีกครั้งเพื่อล้างสี</p>}
     {notice && <p role="status" className="memory-layout-status">{notice}</p>}
     <span className="sr-only" id={dragHelpId}>คลิกเพื่อแก้ไข หรือกดค้างแล้วลากเพื่อจัดเรียงและบันทึกอัตโนมัติ ใช้แป้น Alt พร้อมลูกศรซ้ายหรือขวาเพื่อเลื่อนตำแหน่งได้เช่นกัน</span>
-    <TilePages key={query} items={cards} label="รายการความจำ" renderItem={card=>{
+    <TilePages key={query} items={cards} pageSize={30} label="รายการความจำ" renderItem={card=>{
       if(card.kind==="line"){
         const n=card.note;
         return <button type="button" key={`line:${n.id}`} className="memory-tile memory-card assistant-note-card" disabled={editing||busy}
@@ -207,9 +206,6 @@ export function CalendarBoard({events,today,groups,friends,files,folders,owner,c
   }
   const event=events.find(e=>e.id===selected?.id);
   return <div className="stack calendar-workspace">
-    <div className="calendar-actions">
-      <p className="calendar-guidance">รวมนัดหมายที่ยืนยันกับเลขาแล้ว · แจ้งเตือนช่วง 08:00–09:00 น. เวลาไทย</p>
-    </div>
     <div className="calendar-toolbar">
       <div className="calendar-month-nav">
         <button className="secondary" aria-label="เดือนก่อนหน้า" onClick={()=>move(-1)}>ก่อนหน้า</button>
@@ -239,7 +235,6 @@ export function CalendarBoard({events,today,groups,friends,files,folders,owner,c
     <hr className="calendar-divider"/>
     <section id="calendar-events">
       <div className="section-heading"><h2>รายการทั้งหมด</h2></div>
-      <p className="muted">{matching.length} รายการ{q?` · ค้นหา “${q}”`:""} · หน้าละ 20 รายการ</p>
       <TilePages key={q} items={matching} label="รายการทั้งหมด" renderItem={e=>
         <button type="button" key={e.id} className={`memory-tile calendar-item-tile ${e.enabled?"enabled":""}`} title={e.title} onClick={()=>setSelected({id:e.id,date:e.event_date})}>
           <strong>{e.title}</strong><span className="calendar-item-details"><time dateTime={e.event_date}>{e.event_date}</time>{e.assistant && <span>นัดหมายจากเลขา</span>}{e.annual && <span>ทำซ้ำทุกปี</span>}<span>{e.enabled?"เปิดแจ้งเตือน":"ยังไม่แจ้งเตือน"}</span></span>

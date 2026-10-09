@@ -37,6 +37,7 @@ export function MemoryForm({ memory, mergeWith, files = [], folders = [] }: { me
       setAttachments([...new Set([...other.attachment_ids, ...currentFiles])]); setFileVersion(v => v + 1);
       setMention(current => current || other.mention_owner);
     }
+    if (!merge) setAliases(other.question_examples.join("\n"));
     setTitle(other.title); setDirty(true);
     setNotice(merge ? "รวมข้อความไว้ในช่องข้อมูลแล้ว แก้ให้ถูกต้องแล้วกดบันทึก จะเหลือก้อนเดียว" : "กำลังใช้ข้อมูลที่กรอกแก้ก้อนเดิม ตรวจข้อความก่อนบันทึก");
   };
@@ -53,7 +54,7 @@ export function MemoryForm({ memory, mergeWith, files = [], folders = [] }: { me
     <div className="row between"><small>บอทสุ่มตอบครั้งละ 1 ชุด · {variants.length + 1}/20 ชุด</small><button type="button" className="secondary" disabled={pending || variants.length >= 19} onClick={() => { const item = { key: nextVariant.current++, text: "" }; setVariants(current => [...current, item]); setDirty(true); }}>เพิ่มคำตอบ</button></div>
     <small>แต่ละชุดควรตอบคำถามเดียวกันได้ การสุ่มอาจได้คำตอบเดิมซ้ำ</small>
     {variants.length > 19 && <p role="alert">รวมแล้วเกิน 20 ชุด กรุณาลบคำตอบบางชุดก่อนบันทึก</p>}
-    <details open={aliases ? true : undefined}><summary>คำถามตัวอย่าง (ไม่จำเป็นต้องกรอก)</summary><label className="sr-only" htmlFor={`aliases-${target || "new"}`}>คำถามตัวอย่าง</label><textarea id={`aliases-${target || "new"}`} name="aliases" rows={3} value={aliases} onChange={e => setAliases(e.target.value)} placeholder="กรอกเพิ่มได้ ถ้ามีคำถามที่อยากให้ตอบตรงเป็นพิเศษ" disabled={pending}/></details>
+    <input type="hidden" name="aliases" value={aliases}/>
     <label className="check"><input type="checkbox" name="mention_owner" checked={mention} onChange={e => setMention(e.target.checked)} disabled={pending}/>แท็กเจ้าของพร้อมคำตอบ</label>
     <label>ใช้ได้ถึงวันที่<input name="expires_at" type="date" value={expires} onChange={e => setExpires(e.target.value)} disabled={pending}/></label>
     <AttachmentPicker key={fileVersion} files={files.filter(file => file.visibility === "shareable")} folders={folders} selected={attachments} resetOnSubmit={false} disabled={pending}/>

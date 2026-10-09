@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { CalendarBoard, MemoryBoard, type Friend, type LibraryFile } from "@/components/workspace-ui";
 import { type Memory, type Permission } from "@/components/admin-forms";
 import { LineQuota, QuotaLoading } from "@/components/line-quota";
-import { SemanticStatus } from "@/components/semantic-status";
 import { requireAdmin } from "@/lib/auth";
 import { database, dbError } from "@/lib/db";
 import { thaiDate, type CalendarEntry, type CalendarDelivery } from "@/lib/calendar";
@@ -66,10 +65,6 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       </table></div>
       {!recentDeliveries.length && <p>ยังไม่มีการส่งแจ้งเตือน</p>}
     </section>
-    <details className="panel semantic-details">
-      <summary>การจับความหมายด้วย Gemini และโควตา AI</summary>
-      <Suspense fallback={<p role="status">กำลังอ่านข้อมูล AI…</p>}><SemanticStatus/></Suspense>
-    </details>
     <Suspense fallback={<QuotaLoading/>}><LineQuota/></Suspense>
   </>;
 }
