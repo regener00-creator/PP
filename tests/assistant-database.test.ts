@@ -294,6 +294,23 @@ describe("additive secretary migration and real PostgreSQL boundaries", () => {
       ).rejects.toThrow(/permission denied/);
     },
   );
+  it("owner management updates and deletes confirmed LINE notes in place with stale-version protection", async () => {
+    const id = await proposal(owner, owner);
+    await confirm(id, owner, owner);
+    const otherId = await proposal(friend, friend);
+    await confirm(otherId, friend, friend);
+    const version = (await db.query<{ version: string }>("select updated_at::text as version from pp.assistant_notes where id=$1", [id])).rows[0].version;
+    const edited = await db.query("update pp.assistant_notes set content='หวานน้อย',updated_at=now() where id=$1 and scope_key=$2 and updated_at=$3::timestamptz returning id", [id,owner,version]);
+    expect(edited.rows).toHaveLength(1);
+    expect((await db.query("select content from pp.assistant_notes where id=$1 and scope_key=$2", [id,owner])).rows).toEqual([{content:"หวานน้อย"}]);
+    expect((await db.query("update pp.assistant_notes set content='stale' where id=$1 and scope_key=$2 and updated_at=$3::timestamptz returning id", [id,owner,version])).rows).toHaveLength(0);
+    expect((await db.query("delete from pp.assistant_notes where id=$1 and scope_key=$2 returning id", [otherId,owner])).rows).toHaveLength(0);
+    const latest = (await db.query<{ version: string }>("select updated_at::text as version from pp.assistant_notes where id=$1", [id])).rows[0].version;
+    expect((await db.query("delete from pp.assistant_notes where id=$1 and scope_key=$2 and updated_at=$3::timestamptz returning id", [id,owner,latest])).rows).toHaveLength(1);
+    expect((await db.query("select id from pp.assistant_notes where scope_key=$1", [owner])).rows).toHaveLength(0);
+    expect((await db.query("select id from pp.assistant_notes where scope_key=$1", [friend])).rows).toHaveLength(1);
+    expect((await db.query("select content from pp.memories where title='old'")).rows).toEqual([{content:"OLD_MEMORY"}]);
+  });
   it("retains notes after chat-history retention cleanup", async () => {
     const id = await proposal();
     await confirm(id);

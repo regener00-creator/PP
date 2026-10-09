@@ -7,6 +7,8 @@ import { requireAdmin } from "@/lib/auth";
 import { database, dbError } from "@/lib/db";
 import { thaiDate, type CalendarEntry, type CalendarDelivery } from "@/lib/calendar";
 import { assistantCalendar } from "@/lib/assistant-calendar";
+import { adminAssistantNotes } from "@/lib/assistant-notes";
+import { AssistantNotesBoard } from "@/components/assistant-notes-board";
 import { MemoryReview } from "@/components/memory-review";
 import { memoryCatalog } from "@/lib/memory-assistant";
 import type { LibraryFolder } from "@/components/attachment-picker";
@@ -25,7 +27,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const query = typeof params.q === "string" ? params.q.slice(0, 120) : "";
   await requireAdmin();
   const db = database();
-  const [memories, permissions, files, events, friends, deliveries, folders, owner, appointments] = await Promise.all([
+  const [memories, permissions, files, events, friends, deliveries, folders, owner, appointments, notes] = await Promise.all([
     db.rpc("pp_search_memories", { p_query: query }),
     db.from("permissions").select("group_id,label,enabled,allow_owner_mention").order("created_at", { ascending: false }),
     db.from("files").select("id,name,folder_id,mime,bytes,visibility").order("created_at", { ascending: false }).limit(500),
@@ -35,6 +37,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     db.from("folders").select("id,name").order("name"),
     db.from("owner").select("display_name,line_user_id").eq("id", 1).single(),
     assistantCalendar(),
+    adminAssistantNotes(),
   ]);
   for (const result of [memories, permissions, files, events, friends, deliveries, folders, owner]) dbError(result.error);
   const items = (memories.data || []) as Memory[];
@@ -48,12 +51,13 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   return <>
     <header className="dashboard-heading"><h1>ความทรงจำ</h1></header>
     <div className="stats memory-stats">
-      <article><span>ความจำทั้งหมดที่แสดง</span><strong>{items.length}</strong></article>
+      <article><span>ความจำทั้งหมดที่แสดง</span><strong>{items.length + notes.length}</strong></article>
       <article><span>กลุ่มที่เปิดใช้งาน</span><strong>{groups.filter(g => g.enabled).length}</strong></article>
     </div>
     <CalendarBoard events={calendarEvents} today={thaiDate()} groups={groups} friends={(friends.data || []) as Friend[]} files={libraryFiles} folders={folders.data || []} owner={owner.data || { display_name: "เจ้าของ", line_user_id: null }}>
       <MemoryBoard key={query} items={items} files={libraryFiles} folders={folders.data || []} query={query}/>
       <Suspense fallback={<p role="status">กำลังอ่านรายการที่ต้องตรวจ…</p>}><MemoryReviewLoader files={libraryFiles} folders={folders.data || []}/></Suspense>
+      <AssistantNotesBoard notes={notes}/>
     </CalendarBoard>
     <section className="panel delivery-panel">
       <h2>การแจ้งเตือนล่าสุด</h2>
