@@ -1,6 +1,6 @@
 # PP — ทำงานต่อและสลับคอม
 
-โค้ดหลัก: https://github.com/regener00-creator/PP (Private)
+โค้ดหลัก: https://github.com/regener00-creator/PP
 เว็บที่ใช้งานจริง: https://pp-theta-beryl.vercel.app
 
 ## เปิดครั้งแรกบนเครื่องใหม่
@@ -57,9 +57,9 @@ npx --yes vercel@60.1.3 deploy --prod --yes --project pp --scope regener00-creat
 
 ## งาน Cloud ล่าสุด · 9 ตุลาคม 2026
 
-โค้ดรุ่นเลขาส่วนตัวแก้แล้ว ผ่าน `npm run check` (434 tests, TypeScript, production build) แต่ **ยังไม่ได้นำขึ้น Production** เพราะการเขียน migration ใหม่ถูกปฏิเสธ อ่านส่วน Personal secretary on Cloud ท้าย HANDOFF.md ก่อนทำต่อ
+โค้ดรุ่นเลขาส่วนตัว **ขึ้น Production แล้ว** ที่เว็บเดิม ผ่าน `npm run check` (434 tests / 32 files, TypeScript, production build) รุ่นโค้ด `f3ba166e07267587a95886b5a6ccab56b6ff2152`, deployment `dpl_B2MfoXXD35PxLdsioN8tqWVoKomu` สถานะ READY อ่านส่วน Personal secretary deployed ท้าย HANDOFF.md ก่อนทำต่อ
 
-Migration ใหม่ `20261009065258_personal_secretary.sql` ยังไม่ได้ apply; ห้ามรัน migrations เก่าซ้ำ ให้ตรวจสถานะจริงและขอการอนุมัติใหม่สำหรับงานที่ถูกปฏิเสธก่อนเพิ่มตารางและ deploy โปรเจกต์เดิม เว็บปัจจุบันยังเป็นรุ่นก่อน
+Migration ใหม่ `20261009065258_personal_secretary.sql` apply และบันทึก history แล้วครั้งเดียว หลังผู้ใช้อนุมัติใหม่ ใช้ Supabase และ Vercel โปรเจกต์เดิม ห้ามรัน migration นี้หรือ migrations เก่าซ้ำ หน้าเริ่มต้น `/admin/chat`; Content Planner ปิดแล้วและข้อมูลเก่ายังคงอยู่ ความทรงจำเดิม 21 รายการและปฏิทินเดิม 9 รายการตรวจ fingerprint แล้วตรงก่อนเปลี่ยน ระบบเตือนผ่าน LINE ใช้ช่วง 08:00–09:00 เวลาไทยตาม cron เดิม ไม่มีการทดสอบส่ง LINE หรือเรียก Gemini จริงในงานนี้
 
 ## สถานะที่นำขึ้น GitHub
 
