@@ -20,7 +20,6 @@ export function UnknownReplyForm({ values }: { values: string[] }) {
   const [items, setItems] = useState(() => values.map((text, id) => ({ id, text })));
   const nextId = useRef(values.length);
   return <form action={action} className="stack reply-settings">
-    <small>บอทสุ่มใช้ครั้งละ 1 ข้อความเมื่อไม่พบคำตอบ ทั้งในกลุ่มและแชตส่วนตัวกับบอท</small>
     <div className="reply-options">{items.map((item, index) => <div className="reply-option" key={item.id}>
       <label>ข้อความที่ {index + 1}<textarea name="unknown_replies" value={item.text} onChange={event => setItems(current => current.map(row => row.id === item.id ? { ...row, text: event.target.value } : row))} required maxLength={2000} rows={3} disabled={pending} placeholder="พิมพ์ข้อความที่อยากให้น้องโจอาตอบ"/></label>
       <button type="button" className="secondary danger" aria-label={`ลบข้อความที่ ${index + 1}`} disabled={pending || items.length === 1} onClick={() => setItems(current => current.filter(row => row.id !== item.id))}>ลบ</button>
