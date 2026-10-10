@@ -512,3 +512,4 @@ Production deployment dpl_6hgBxqbYkVaeiCR77Z3vcAzArz5t is READY and aliased to h
 ## Unknown reply layout · 10 October 2026
 
 - Removed the explanatory sentence below the unknown-reply heading. Scoped this settings form to four columns on desktop, two at <=1100px, one at <=600px; delete buttons sit below their textareas. Other answer-variant forms retain their previous layout. No reply values or bot behavior changed. Production build and TypeScript passed.
+- Source 27e4790 pushed to main and deployed READY as dpl_Bkpz8ZRRToXxKtf6yHMJ1ABoMf9w / https://pp-ge596kagp-regener00-creators-projects.vercel.app. Authenticated production page verified four equal columns with 20 existing replies (five rows), requested sentence absent. Visual screenshot saved outside repo as ../PP-unknown-replies.jpg. No form submissions or reply data edits.
