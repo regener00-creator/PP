@@ -2,7 +2,6 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 
 const pages = [
   { href: "/admin", label: "ความทรงจำ" },
@@ -34,14 +33,11 @@ function NavLink({
   label: string;
   active: boolean;
 }) {
-  const [intent, setIntent] = useState(false);
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      prefetch={intent ? true : null}
-      onMouseEnter={() => setIntent(true)}
-      onFocus={() => setIntent(true)}
+      prefetch={true}
     >
       <LinkLabel>{label}</LinkLabel>
     </Link>

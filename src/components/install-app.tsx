@@ -73,7 +73,7 @@ export function InstallAppButton({ className = "", showHelpLink = true }: { clas
   const state = useContext(InstallContext);
   const [result, setResult] = useState<InstallResult | null>(null);
   if (!state) return null;
-  if (state.installed) return <p className="install-status">เปิดใช้งานจากแอปน้องโจอาได้เลย</p>;
+  if (state.installed) return null;
   return <div className="install-control">
     <button type="button" className={className} disabled={state.busy}
       onClick={async () => setResult(await state.install())}>

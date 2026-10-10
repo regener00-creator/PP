@@ -71,8 +71,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
 async function MemoryReviewLoader({ files, folders }: { files: LibraryFile[]; folders: LibraryFolder[] }) {
   await requireAdmin();
-  const [catalog, result] = await Promise.all([memoryCatalog(), database().from("memory_issues").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(100)]);
+  const result = await database().from("memory_issues").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(100);
   dbError(result.error);
+  if (!result.data?.length) return <MemoryReview issues={[]} files={files} folders={folders}/>;
+  const catalog = await memoryCatalog();
   const issues: MemoryIssue[] = (result.data || []).flatMap(issue => {
     const left = catalog.memories.find(m => m.id === issue.left_id && m.revision === issue.left_revision);
     const right = catalog.memories.find(m => m.id === issue.right_id && m.revision === issue.right_revision);
