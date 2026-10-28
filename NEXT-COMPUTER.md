@@ -1,3 +1,7 @@
+# Current blocker — 28 October 2026
+
+Google AI probe on the existing Vercel production identity returned HTTP 403 with a billing-related error. The secretary chat is NOT fixed yet. See the final section of HANDOFF.md. Source diagnostics are saved in branch `fix/transient-database-read-recovery`; production still uses `dpl_BDCBcftbDvjXWMKt7eUtiey9u9Lc`. Diagnostic deployment `dpl_H8NjM8h4DwDRz1bTwagjz67u3QbC` is intentionally ERROR and must not be promoted. Check the existing Google Cloud project's Billing account, then rerun the probe and tests before publishing. Never upgrade billing/prepay automatically. No migration is needed.
+
 # PP — ทำงานต่อและสลับคอม
 
 โค้ดหลัก: https://github.com/regener00-creator/PP
