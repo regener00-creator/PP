@@ -1,11 +1,12 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { required } from "./env";
+import { databaseFetch } from "./database-fetch";
 export function database() {
   return createClient(required("SUPABASE_URL"), required("SUPABASE_SECRET_KEY"), {
     db: { schema: "pp" },
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(5000), cache: "no-store" }) }
+    global: { fetch: databaseFetch }
   });
 }
 export function dbError(error: unknown, operation = "database") {

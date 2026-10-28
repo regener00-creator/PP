@@ -1,7 +1,25 @@
+# Current blocker — 28 October 2026
+
+Google AI probe on the existing Vercel production identity returned HTTP 403 with a billing-related error. The secretary chat is NOT fixed yet. See the final section of HANDOFF.md. Source diagnostics are saved in branch `fix/transient-database-read-recovery`; production still uses `dpl_BDCBcftbDvjXWMKt7eUtiey9u9Lc`. Diagnostic deployment `dpl_H8NjM8h4DwDRz1bTwagjz67u3QbC` is intentionally ERROR and must not be promoted. Check the existing Google Cloud project's Billing account, then rerun the probe and tests before publishing. Never upgrade billing/prepay automatically. No migration is needed.
+
 # PP — ทำงานต่อและสลับคอม
 
 โค้ดหลัก: https://github.com/regener00-creator/PP
 เว็บที่ใช้งานจริง: https://pp-theta-beryl.vercel.app
+
+## จุดเริ่มต้นล่าสุด · 28 ตุลาคม 2026
+
+สถานะส่วนนี้แทนรายละเอียดเก่าด้านล่างที่ระบุหน้าแชตเว็บและ cron รายวัน
+
+- Production เดิมใช้โค้ดแก้ปัญหาอ่านฐานข้อมูลชั่วคราว `ffafc4b0617dd45171b161f859ac5e005bba8cef` จาก branch `fix/transient-database-read-recovery`; [Draft PR #1](https://github.com/regener00-creator/PP/pull/1) ยังไม่รวมเข้า `main` ซึ่งอยู่ที่ `75b7255` ณ วันที่ตรวจ จึงห้ามใช้ main รุ่นเก่าทับ Production โดยไม่ตรวจความต่าง
+- Deployment `dpl_BDCBcftbDvjXWMKt7eUtiey9u9Lc` สถานะ READY บน Vercel `pp` เดิม; Supabase `NOOSOL WEBSITE` / `uyrwypfrvfhoryuvcujg` ยัง ACTIVE_HEALTHY ใช้ schema `pp` เท่านั้น
+- ก่อนเริ่มงานให้ตรวจ `git status`, `git fetch origin` และสถานะ PR ถ้า PR #1 ยังไม่ merge ให้ทำงานต่อจาก branch นี้แล้ว `git pull --ff-only` หาก merge แล้วให้ใช้ main ล่าสุดที่รวมการแก้นี้ ห้ามทิ้งงานค้างในเครื่อง
+- เลขา **จำ–ถาม–เตือน–นัดหมาย–คุยทั่วไปผ่าน LINE**; เว็บเริ่มที่ `/admin` สำหรับความจำและปฏิทิน หน้าแชตเว็บเลิกใช้แล้ว Content Planner ยังปิดอยู่
+- ตั้งเวลาเตือนได้ต่อรายการ (ค่าเริ่มต้น 08:00 เวลาไทย) Supabase Cron ตรวจทุกนาที ไม่ใช่ cron รายวันเดิม เวลาที่เขียนในเนื้อหานัด LINE ยังไม่เปลี่ยนเวลาเตือนอัตโนมัติ
+- Migration history ตรวจแล้วถึง `20261010024025_pp_admin_notebook_snapshot` รวม personal secretary และ minute scheduler ที่ใช้แล้ว ห้ามรันซ้ำ ห้ามสร้างโปรเจกต์ใหม่หรือคืนข้อมูลกลุ่มทดสอบที่ลบไป
+- ตรวจหลังล็อกอินวันที่ 28 ต.ค. ผ่านแล้ว: ความจำ/ไฟล์/ตั้งค่า, รีโหลด dashboard, ค้นหาความจำ และฟอร์มเวลาเตือน (แก้เฉพาะร่างแล้วปิด ไม่บันทึกข้อมูลจริง) ไม่พบ browser error หรือ Vercel error/fatal ในช่วงที่ตรวจ
+- งานค้าง: ทดสอบเส้นทาง LINE/Gemini และการรับเตือนจริงโดยกำหนดผู้รับและข้อมูลทดสอบก่อนส่งข้อความ; PR #1 ยังเป็น Draft และยังไม่ merge การตรวจหน้าหลังล็อกอินเสร็จแล้ว ไม่ต้องขอให้ผู้ใช้ล็อกอินใหม่โดยอัตโนมัติหาก session ยังใช้ได้
+- ผลตรวจวันที่ 28 ต.ค. และข้อจำกัดการทดสอบอยู่ท้าย `HANDOFF.md`
 
 ## เปิดครั้งแรกบนเครื่องใหม่
 
